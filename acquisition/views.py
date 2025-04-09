@@ -12,7 +12,6 @@ class ProcessECGView(APIView):
         print("got file")
         try:
             result = asyncio.run(run_agent_pipeline(ecg_dat,ecg_hea))  # Call the agent system
-            print("result: ",result)
             if result == "No response":
                 return Response({"status": "error", "message": "No response"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({"status": "success", "result": result},status=status.HTTP_200_OK)

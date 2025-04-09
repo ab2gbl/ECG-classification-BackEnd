@@ -1,5 +1,5 @@
 from spade.agent import Agent
-from spade.behaviour import OneShotBehaviour
+from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 import wfdb
 from scipy.signal import butter, filtfilt
@@ -9,6 +9,8 @@ import os
 import asyncio
 from scipy.signal import resample
 import json
+import base64
+from spade.template import Template
 # Bandpass filter function
 def bandpass_filter(signal, lowcut=0.5, highcut=10, fs=250, order=4):
     nyquist = 0.5 * fs
@@ -36,69 +38,57 @@ def resample_signal(signal, original_fs, target_fs):
 class AcquisitionAgent(Agent):
     
     # Behaviour to send ECG data
-    class SendECGData(OneShotBehaviour):
-        def __init__(self, normalized_signal):
-            super().__init__()
-            self.normalized_signal = normalized_signal
-
+    class WaitForData(CyclicBehaviour):
+        
         async def run(self):
-            print("[AcquisitionAgent] Sending ECG data...")
-            msg = Message(to="segmenter@localhost")  # Assuming this is the correct recipient
-            normalized_signal = self.normalized_signal
-            #print(type(normalized_signal), normalized_signal.shape)
-            #print(normalized_signal[:10])  # Just to make sure it's real data
+            msg = await self.receive(timeout=10)
+            if msg:
+                print("[AcquisitionAgent] 📥 Received ECG data from controller")
+                data = json.loads(msg.body)
+                dat_bytes = base64.b64decode(data["dat_file"])
+                hea_bytes = base64.b64decode(data["hea_file"])
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    first_line = hea_bytes.decode().splitlines()[0]  # ✅ no .read()
+                    true_base_name = first_line.split()[0]
+                    base_path = os.path.join(tmpdirname, true_base_name)
+                    with open(base_path + ".dat", "wb") as f:
+                        f.write(dat_bytes)
+                    with open(base_path + ".hea", "wb") as f:
+                        f.write(hea_bytes)
+                    
+                    record = wfdb.rdrecord(base_path)
+
+
+                
+                    # Get the signal (ECG data)
+                    signal = record.p_signal[:, 0]  # lead I
+                    fs = record.fs
+                    ecg_signal=signal[(0):(10*fs)]
+                    
+                    # Optionally apply preprocessing (bandpass filter, smoothing, normalization)
+                    filtered_signal = bandpass_filter(ecg_signal)
+                    smoothed_signal = smooth_signal(filtered_signal)
+                    normalized_signal = normalize_signal(smoothed_signal)
+                    if fs != 250:
+                        normalized_signal = resample_signal(normalized_signal, original_fs=fs, target_fs=250)
+                        fs = 250
+                    
+
+                    # Send result back to controller
+                    response = Message(to="controller@localhost")
+                    response.body = json.dumps({
+                        "signal": normalized_signal.tolist()  # Your processed signal
+                    })
+                    await self.send(response)
+                    print("[AcquisitionAgent] ✅ Sent processed ECG back to controller")
+            
+            
 
             
-            msg.body = json.dumps(normalized_signal.tolist())  # ✅ this will now work#msg.body = str(self.normalized_signal)  # Sending data as a string (or you could use pickling for more complex data)
-            #print("msg body: ", msg.body)
-            await asyncio.sleep(2)
-            await self.send(msg)
+            
 
     async def setup(self):
-        print(f"[{self.jid}] AcquisitionAgent ready.")
-
-        ecg_dat_file = self.get("ecg_dat")  # InMemoryUploadedFile
-        ecg_hea_file = self.get("ecg_hea")  # InMemoryUploadedFile
-
-        try:
-            # Create a temporary directory to hold the files
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                # Peek into the uploaded .hea file to get the base name (like "100")
-                first_line = ecg_hea_file.read().decode().splitlines()[0]
-                true_base_name = first_line.split()[0]
-
-                # Reset file pointer to beginning for saving
-                ecg_hea_file.seek(0)
-                ecg_dat_file.seek(0)
-
-                base_path = os.path.join(tmpdirname, true_base_name)
-                with open(base_path + ".hea", "wb") as f:
-                    f.write(ecg_hea_file.read())
-
-                with open(base_path + ".dat", "wb") as f:
-                    f.write(ecg_dat_file.read())
-
-                # Now this will work
-                record = wfdb.rdrecord(base_path)
-
-
-                
-                # Get the signal (ECG data)
-                signal = record.p_signal[:, 0]  # lead I
-                fs = record.fs
-                ecg_signal=signal[(0):(10*fs)]
-                
-                # Optionally apply preprocessing (bandpass filter, smoothing, normalization)
-                filtered_signal = bandpass_filter(ecg_signal)
-                smoothed_signal = smooth_signal(filtered_signal)
-                normalized_signal = normalize_signal(smoothed_signal)
-                if fs != 250:
-                    normalized_signal = resample_signal(normalized_signal, original_fs=fs, target_fs=250)
-                    fs = 250
-                
-                # Send the processed data
-                self.add_behaviour(self.SendECGData(normalized_signal))
+        print(f"[{self.jid}] AcquisitionAgent ready and waiting...")
         
-        except Exception as e:
-            print(f"Error loading ECG data: {e}")
-
+        self.add_behaviour(self.WaitForData())        
+        

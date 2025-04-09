@@ -10,11 +10,9 @@ import asyncio
 class SegmentationAgent(Agent):
     class ReceiveAndSegment(CyclicBehaviour):
         async def run(self):
-            print("Waiting for message...")
             msg = await self.receive(timeout=10)  # Wait up to 10 seconds
             if msg:
-                print("Got message ✅")
-                print("[SegmentationAgent] Received ECG")
+                print("[SegmentationAgent] Received ECG ✅")
                 
                 signal = np.array(json.loads(msg.body))  # ✅ Parse safely
                 #signal = np.array(eval(msg.body))  # Safely parse string to numpy array
@@ -49,11 +47,15 @@ class SegmentationAgent(Agent):
 
                     full_prediction = np.concatenate(predictions)
                     print("predected: ",predictions[-2])
-                    out_msg = Message(to="feature@localhost")
-                    out_msg.body = str(full_prediction)
+                    
 
-                    await asyncio.sleep(2)
-                    await self.send(out_msg)
+                    # Send result back to controller
+                    response = Message(to="controller@localhost")
+                    response.body = json.dumps({
+                        "full_prediction": full_prediction.tolist()  # Your processed signal
+                    })
+                    await self.send(response)
+                    print("[AcquisitionAgent] ✅ Sent processed ECG back to controller")
 
                 except Exception as e:
                     print("message", str(e))
@@ -62,8 +64,7 @@ class SegmentationAgent(Agent):
                 del model_deep
                 torch.cuda.empty_cache()
                 print("[SegmentationAgent] Model unloaded.")
-            else:
-                print("No message received ❌")
+                
 
     async def setup(self):
         print(f"[{self.jid}] SegmentationAgent started.")
