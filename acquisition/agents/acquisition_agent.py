@@ -55,7 +55,7 @@ class AcquisitionAgent(Agent):
                         f.write(dat_bytes)
                     with open(base_path + ".hea", "wb") as f:
                         f.write(hea_bytes)
-                    
+                                            
                     record = wfdb.rdrecord(base_path)
 
 
@@ -63,10 +63,11 @@ class AcquisitionAgent(Agent):
                     # Get the signal (ECG data)
                     signal = record.p_signal[:, 0]  # lead I
                     fs = record.fs
-                    ecg_signal=signal[(0):(10*fs)]
+                    ecg_signal=signal[(0):(15*fs)]
+                    #ecg_signal=signal[:]
                     
                     # Optionally apply preprocessing (bandpass filter, smoothing, normalization)
-                    filtered_signal = bandpass_filter(ecg_signal)
+                    filtered_signal = bandpass_filter(ecg_signal,fs=fs)
                     smoothed_signal = smooth_signal(filtered_signal)
                     normalized_signal = normalize_signal(smoothed_signal)
                     if fs != 250:
@@ -77,7 +78,7 @@ class AcquisitionAgent(Agent):
                     # Send result back to controller
                     response = Message(to="controller@localhost")
                     response.body = json.dumps({
-                        "signal": normalized_signal.tolist()  # Your processed signal
+                        "normalized_signal": normalized_signal.tolist()  # Your processed signal
                     })
                     await self.send(response)
                     print("[AcquisitionAgent] ✅ Sent processed ECG back to controller")

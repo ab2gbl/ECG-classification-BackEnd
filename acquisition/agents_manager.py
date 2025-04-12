@@ -6,7 +6,7 @@ from .agents.controller_agent import ControllerAgent
 from spade.message import Message
 import asyncio
 
-async def run_agent_pipeline(ecg_dat,ecg_hea):
+async def run_agent_pipeline(ecg_dat,ecg_hea,model,start=0,end=1):
     # Initialize agents
     a = AcquisitionAgent("acquirer@localhost", "pass")
     s = SegmentationAgent("segmenter@localhost", "pass")
@@ -15,8 +15,9 @@ async def run_agent_pipeline(ecg_dat,ecg_hea):
     c = ControllerAgent("controller@localhost", "pass")
     c.set("ecg_dat", ecg_dat)
     c.set("ecg_hea", ecg_hea)
-    c.set("start_step", 0)
-    c.set("end_step", 1)
+    c.set("model", model) if model else c.set("model", None)
+    c.set("start_step", start)
+    c.set("end_step", end)
     print("starting agents")
     await a.start()
     await s.start()
@@ -35,7 +36,6 @@ async def run_agent_pipeline(ecg_dat,ecg_hea):
     await c.result_ready.wait()
     print("[ControllerAgent] result_ready, waiting for final result...")
     final_result = c.final_result
-    print("[ControllerAgent] Final result received")
     final_decision = final_result if final_result else "No response"
     print("[ControllerAgent] Pipeline completed")
 
