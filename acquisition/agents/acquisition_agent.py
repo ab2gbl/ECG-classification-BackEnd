@@ -58,12 +58,14 @@ class AcquisitionAgent(Agent):
                                             
                     record = wfdb.rdrecord(base_path)
 
-
-                
-                    # Get the signal (ECG data)
+                  # Get the signal (ECG data)
                     signal = record.p_signal[:, 0]  # lead I
                     fs = record.fs
-                    ecg_signal=signal[(0):(15*fs)]
+                    start = data['signal_start'] if 'signal_start' in data else 0
+                    end = data['signal_end'] if 'signal_end' in data else len(signal)/fs
+                    if end > len(signal)/fs:
+                        end = len(signal)/fs
+                    ecg_signal=signal[int(start*fs):int(end*fs)]
                     #ecg_signal=signal[:]
                     
                     # Optionally apply preprocessing (bandpass filter, smoothing, normalization)

@@ -12,9 +12,10 @@ from asyncio import Event
 class ControllerAgent(Agent):
     def __init__(self, jid, password):
         super().__init__(jid, password)
-        self.final_result = []
+        self.final_result = {}
         self.normalized_signal = None
         self.result_ready = Event()
+        self.mask = None
     class PipelineManager(OneShotBehaviour):
         async def run(self):
             print("[ControllerAgent] Starting pipeline...")
@@ -23,9 +24,12 @@ class ControllerAgent(Agent):
 
             
             steps = range(start_step, end_step + 1)
+            print(f"[ControllerAgent] Start and End: {start_step} - {end_step}")
             if 0 in steps:
                 ecg_dat_file = self.get("ecg_dat")  # InMemoryUploadedFile
                 ecg_hea_file = self.get("ecg_hea")  # InMemoryUploadedFile
+                ecg_signal_start = self.get("signal_start") if self.get("signal_start") is not None else 0
+                ecg_signal_end = self.get("signal_end") if self.get("signal_end") is not None else None
                 dat_bytes = ecg_dat_file.read()
                 hea_bytes = ecg_hea_file.read()
 
@@ -36,7 +40,9 @@ class ControllerAgent(Agent):
                 msg = Message(to="acquirer@localhost")
                 msg.body = json.dumps({
                     "dat_file": dat_b64,
-                    "hea_file": hea_b64
+                    "hea_file": hea_b64,
+                    "signal_start": ecg_signal_start,
+                    "signal_end": ecg_signal_end
                 })
                 
 
@@ -51,7 +57,7 @@ class ControllerAgent(Agent):
                     print("[ControllerAgent] ❌ No response from AcquisitionAgent")
 
 
-                self.agent.final_result.append(response.body)
+                self.agent.final_result.update(json.loads(response.body))
                 if 1 not in steps:
 
                     print("[ControllerAgent] Final result got")
@@ -59,6 +65,8 @@ class ControllerAgent(Agent):
                 else:
                     self.agent.normalized_signal = json.loads(response.body)["normalized_signal"]
                 
+            
+              
             if 1 in steps:
                 print("[ControllerAgent] Sending ECG data...")
                 msg = Message(to="segmenter@localhost")
@@ -70,21 +78,49 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] 📨 Sent data to SegmentationAgent")
 
                 # Wait for response
-                response = await self.receive(timeout=15)
+                response = await self.receive(timeout=60)
                 if response:
                     print("[ControllerAgent] ✅ Received response from SegmentationAgent")
+                    self.agent.mask = json.loads(response.body)["full_prediction"]
+                    
+                    # full_prediction
                 else:
                     print("[ControllerAgent] ❌ No response from SegmentationAgent")
 
 
-                self.agent.final_result.append(response.body)
                 if 2 not in steps:
+                    self.agent.final_result.update(json.loads(response.body))
                     print("[ControllerAgent] Final result got")
-                    self.agent.result_ready.set()  
-              
+                    self.agent.result_ready.set()
+
+            #print(self.agent)
+            
+            if 2 in steps:
+                print("[ControllerAgent] Sending detection data to PostDetectionAgent...")
+                msg = Message(to="post_detection@localhost")
+                msg.body = json.dumps({
+                    "signal": self.agent.normalized_signal,
+                    "mask": self.agent.mask
+                })
+                await self.send(msg)
+                print("[ControllerAgent] 📨 Sent data to PostDetectionAgent")
+
+                # Wait for response
+                response = await self.receive(timeout=30)
+                if response:
+                    print("[ControllerAgent] ✅ Received response from PostDetectionAgent")
+                else:
+                    print("[ControllerAgent] ❌ No response from PostDetectionAgent")
 
 
-
+                self.agent.final_result.update(json.loads(response.body))
+                
+                if 3 not in steps:
+                    self.agent.mask = json.loads(response.body)["full_prediction"]
+                    print("[ControllerAgent] Final result got")
+                    self.agent.result_ready.set()   
+            
+            
             
 
     async def setup(self):

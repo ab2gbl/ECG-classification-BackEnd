@@ -21,4 +21,13 @@ urlpatterns = [
     path('ProcessECGView/', views.ProcessECGView.as_view()),
     #PartsDetectionView
     path('PartsDetectionView/', views.PartsDetectionView.as_view()),
+    path('FullDetectionView/', views.FullDetectionView.as_view()),
+
 ]
+
+# 232,223,222,221,219,
+# 215
+# 209,208,207,203,202,
+# 200,124,121,118,115,
+# 114,108,107,106,105,
+# 100,

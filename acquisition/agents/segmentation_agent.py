@@ -15,7 +15,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 import gc
 
-
+from tqdm import tqdm
 
 @register_keras_serializable()
 def weighted_binary_crossentropy(y_true, y_pred):
@@ -115,13 +115,14 @@ class SegmentationAgent(Agent):
                         print("Starting predection")
                         i=0
                         with torch.no_grad():
-                            for window in segments:
-                                print(i)
+                            for i in tqdm(range(len(segments)), desc="detection"):
+                                window = segments[i]
+                                
                                 window = torch.tensor(window, dtype=torch.float32).to(device)
                                 output = model_deep(window)  # (1, C, L)
                                 pred = torch.argmax(output, dim=1).cpu().numpy()[0]  # (L,)
                                 predictions.append(pred)
-                                i+=1
+                                
 
                         full_prediction = np.concatenate(predictions).tolist() 
 
