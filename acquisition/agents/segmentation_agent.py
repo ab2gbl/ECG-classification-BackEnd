@@ -2,7 +2,7 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 import torch
-from .detection_model import UNet1D_Enhanced
+from .segmentation_model import UNet1D_Enhanced
 import numpy as np
 import json
 import os

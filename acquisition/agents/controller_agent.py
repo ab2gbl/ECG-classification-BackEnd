@@ -16,6 +16,7 @@ class ControllerAgent(Agent):
         self.normalized_signal = None
         self.result_ready = Event()
         self.mask = None
+        self.features = None
     class PipelineManager(OneShotBehaviour):
         async def run(self):
             print("[ControllerAgent] Starting pipeline...")
@@ -113,13 +114,37 @@ class ControllerAgent(Agent):
                     print("[ControllerAgent] ❌ No response from PostDetectionAgent")
 
 
+                self.agent.mask = json.loads(response.body)["full_prediction"]
                 self.agent.final_result.update(json.loads(response.body))
-                
                 if 3 not in steps:
-                    self.agent.mask = json.loads(response.body)["full_prediction"]
                     print("[ControllerAgent] Final result got")
                     self.agent.result_ready.set()   
+
+
             
+            if 3 in steps:
+                print("[ControllerAgent] Sending detection data to FeaturesAgent...")
+                msg = Message(to="feature@localhost")
+                msg.body = json.dumps({
+                    "signal": self.agent.normalized_signal,
+                    "mask": self.agent.mask
+                })
+                await self.send(msg)
+                print("[ControllerAgent] 📨 Sent data to FeaturesAgent")
+
+                # Wait for response
+                response = await self.receive(timeout=30)
+                if response:
+                    print("[ControllerAgent] ✅ Received response from FeaturesAgent")
+                else:
+                    print("[ControllerAgent] ❌ No response from FeaturesAgent")
+
+
+                self.agent.final_result.update(json.loads(response.body))
+                self.agent.features = json.loads(response.body)["features"]
+                if 4 not in steps:
+                    print("[ControllerAgent] Final result got")
+                    self.agent.result_ready.set()   
             
             
 

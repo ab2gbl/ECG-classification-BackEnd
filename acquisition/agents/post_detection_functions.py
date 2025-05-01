@@ -172,6 +172,8 @@ def check_repeated_waves(predicted):
 
 
 
+from scipy.signal import find_peaks
+
 def fix_before_P(signal,mask,p_start,p_end,slope_threshold=0.02):
   diff_signal = np.diff([signal[p_start],signal[p_start-5]])  # check around the Q point for slope change
   j = 0
@@ -206,7 +208,7 @@ def fix_P(signal, mask):
 
     fixed_p_info = []
 
-    for i in range(len(p_starts)):
+    for i in tqdm(range(len(p_starts)), desc="Processing P"):
 
         slope_threshold = 0.02  # arbitrary threshold for slope to be considered small
         p_start = p_starts[i]
@@ -327,101 +329,131 @@ def fix_P(signal, mask):
 
     return mask
 
+import numpy as np
+from scipy.signal import find_peaks
+
 def fast_fix_QRS(signal, mask, fs=250):
-    time = np.arange(len(signal)) / fs
-    indices = np.arange(len(mask))  # Precompute indices array
+    # time = np.arange(len(signal)) / fs
+    # indices = np.arange(len(mask))  # Precompute indices array
 
     # Precompute slopes for QRS start and end adjustments
-    slope_start = np.zeros_like(signal)
-    slope_start[3:] = signal[3:] - signal[:-3]  # slope[i] = signal[i] - signal[i-3]
+    # slope_start = np.zeros_like(signal)
+    # slope_start[3:] = signal[3:] - signal[:-3]  # slope[i] = signal[i] - signal[i-3]
     slope_end = np.zeros_like(signal)
     slope_end[:-5] = signal[:-5] - signal[5:]    # slope[i] = signal[i] - signal[i+5]
 
-    qrs_mask = (mask == 2).astype(int)
+    # Identify QRS regions (mask == 2)
+    qrs_mask = (mask == 2).astype(np.int8)
     transitions = np.diff(qrs_mask, prepend=0)
-    qrs_starts = np.where(transitions == 1)[0]
+    qrs_starts = np.flatnonzero(transitions == 1)
+    qrs_ends = np.flatnonzero(transitions == -1) - 1
+    n = len(signal)
+
+    if len(qrs_ends) < len(qrs_starts):
+        qrs_ends = np.append(qrs_ends, n - 1)
 
     for i in tqdm(range(len(qrs_starts)), desc="Processing QRS"):
         qrs_start = qrs_starts[i]
-        next_qrs_start = qrs_starts[i+1] if i < len(qrs_starts)-1 else len(mask)
+        # next_qrs_start = qrs_starts[i+1] if i < len(qrs_starts)-1 else len(mask)
         # Find QRS end within the current segment
-        qrs_end = next_qrs_start - 1
-        while qrs_end >= qrs_start and mask[qrs_end] != 2:
-            qrs_end -= 1
-        if qrs_end < qrs_start:
-            continue  # skip invalid segment
-
+        qrs_end = qrs_ends[i]
+        #before_qrs_end = qrs_ends[i-1] if i > 0 else 0
         # Adjust QRS start based on preceding P wave
-        p_indices = np.where(mask[:qrs_start] == 1)[0]
+        p_indices = np.where(mask[max(0, qrs_start-100):qrs_start] == 1)[0]
         valid_p = []
         if len(p_indices) > 0:
             # Check from the end backwards
-            for p_end in reversed(p_indices):
-                if np.any(mask[p_end:qrs_start] >= 2):  # Check if any QRS (2) or T-wave (3) exists
-                    continue
+            p_end = p_indices[-1]
+            p_end = p_indices[-1]  # just take the last one
+            if not np.any(mask[p_end:qrs_start] >= 2):  # no QRS or T in between
                 p_start = p_end
-                while p_start > 0 and mask[p_start-1] == 1:
+                if p_start > 0 and mask[p_start-1] == 1:
                     p_start -= 1
                 valid_p = np.arange(p_start, p_end + 1)
-                break
-            if len(valid_p) > 0 and (qrs_start - valid_p[-1]) < 20:
-                mask[valid_p[-1]+1:qrs_start] = 2
-                qrs_start = valid_p[-1] + 1
-
-        # Adjust QRS start using slope-based backtracking if no P wave found
-        if len(valid_p) == 0:
-            slope_threshold = 0.02
-            max_back_steps = 100  # Prevent infinite loops
-            back_steps = 0
-
-            current_start = qrs_start
-            while back_steps < max_back_steps and current_start >= 3:
-                current_slope = slope_start[current_start]
-                if abs(current_slope) < slope_threshold:
-                    break
-                # Check for peaks in previous 100 samples
-                pre_range = slice(max(0, current_start - 100), current_start)
-                pre_signal = signal[pre_range]
-                if len(pre_signal) < 3:
-                    break
-                peaks, _ = find_peaks(pre_signal, prominence=0.01)
-                if len(peaks) > 0:
-                    first_peak = pre_range.start + peaks[0]
-                    if current_start <= first_peak:
+                
+        if len(valid_p) > 0 and (qrs_start - valid_p[-1]) < 20:
+            # print("vaid p, qrs moved back:",qrs_start-p_end)
+            mask[p_end+1:qrs_start] = 2
+            qrs_start = p_end +1
+        else:
+            # Precompute signal range before QRS
+            # print("no vaid p")
+            
+            pre_start = max(0, qrs_start - 100)
+            pre_wave = signal[pre_start:qrs_start]
+            
+            # Find first valid peak before QRS
+            first_peak_before_qrs = None
+            if len(pre_wave) > 3:
+                peaks, _ = find_peaks(pre_wave, prominence=0.01)
+                for p in peaks:
+                    if mask[pre_start + p] == 0:
+                        # print("found peak before qrs")
+                        first_peak_before_qrs = pre_start + p
                         break
-                if mask[current_start - 1] != 0:
-                    break
-                current_start -= 1
-                back_steps += 1
-                slope_threshold = max(slope_threshold - 0.001, 0.005)
-            mask[current_start:qrs_start] = 2
-            qrs_start = current_start
+            # Track first peak (if any)
 
+                    
+            original_qrs_start = qrs_start  # save original position
+            slope_threshold = 0.02
+            max_back_steps = 25
+            back_steps = 0
+        
+            while back_steps < max_back_steps and qrs_start >= 3:
+                       
+                diff_signal = signal[qrs_start] - signal[qrs_start - 3]
+                if abs(diff_signal) < slope_threshold:
+                    
+                    # Dynamic threshold (only if stuck)
+                    if back_steps == 0 and slope_threshold>0.005:
+                        slope_threshold = max(slope_threshold - 0.001, 0.005)
+                        continue 
+                    break
+        
+                if first_peak_before_qrs is not None and qrs_start <= first_peak_before_qrs:
+                    break
+        
+                if mask[qrs_start - 1] != 0:
+                    break
+        
+                # Move QRS start backward
+                qrs_start -= 1
+                back_steps += 1
+        
+            
+            mask[qrs_start:original_qrs_start] = 2
+            # print("vaid p, qrs moved back:",original_qrs_start-qrs_start)
+            
         # Adjust QRS end
         # Extend until signal stops descending
+        original_qrs_end = qrs_end
         while qrs_end < len(signal)-1 and mask[qrs_end+1] == 0 and signal[qrs_end] >= signal[qrs_end+1]:
             qrs_end += 1
-            mask[qrs_end] = 2
+        
+        # Vectorize the mask update to do it all at once
+        mask[original_qrs_end:qrs_end+1] = 2
 
         # Further adjust based on slope
         slope_threshold_end = 0.02
-        max_forward_steps = 50
+        max_forward_steps = 25
         forward_steps = 0
-        while (qrs_end < len(signal)-5 and forward_steps < max_forward_steps and 
-               abs(slope_end[qrs_end]) >= slope_threshold_end and 
-               mask[qrs_end+1] == 0):
-            qrs_end += 1
-            mask[qrs_end] = 2
-            forward_steps += 1
-            slope_threshold_end = max(slope_threshold_end - 0.001, 0.005)
-
+        # print("vaid p, qrs moved back:",original_qrs_start-qrs_start)
+        
+        
+        while True:
+            while (qrs_end < len(signal)-5 
+                   and forward_steps < max_forward_steps 
+                   and abs(slope_end[qrs_end]) >= slope_threshold_end 
+                   and mask[qrs_end+1] == 0):
+                qrs_end += 1
+                forward_steps += 1
+            if abs(slope_end[qrs_end]) < slope_threshold_end and forward_steps == 0 and slope_threshold_end>0.005: 
+                slope_threshold_end = max(slope_threshold_end - 0.001, 0.005)
+                continue
+            else :
+                mask[qrs_end - forward_steps + 1: qrs_end + 1] = 2
+                break
+                                
+            
+        
     return mask
-
-def post_process_ecg(predicted):
-
-    predicted = remove_uncomplete_first_last_wave(predicted)
-    predicted = merge_close_waves(predicted)
-    predicted = remove_irrelevant_waves(predicted)
-    predicted = check_repeated_waves(predicted)
-
-    return predicted
