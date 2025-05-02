@@ -18,7 +18,9 @@ python -m venv myenv
 - For Linux:
 
 ```bash
-    python3 -m venv myenv
+python3 -m venv myenv
+#or
+python3.12 -m virtualenv env
 ```
 
 3. **Activate the virtual environment**
@@ -33,14 +35,14 @@ myenv\Scripts\activate
 - For Linux:
 
 ```bash
-    source myenv/bin/activate
+source myenv/bin/activate
 ```
 
 3. **Install the required dependencies**
    Install the necessary Python packages listed in the requirements.txt file:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt # --no-deps
 ```
 
 4. **Place your models**
@@ -50,9 +52,15 @@ pip install -r requirements.txt
 - models links:
   - [TCN](https://drive.google.com/file/d/1HpYazmdleuyBTERfswcsJzbq7Vgp4MCS/view?usp=sharing)
   - [UNet](https://drive.google.com/file/d/1OgGjSDh-HdKuyGcOYPCUztTXu9U6Ld-p/view?usp=sharing)
+  - [R detection](https://www.kaggle.com/models/abdessamiguebli/r-detection)
+  - [Classification](https://www.kaggle.com/code/abdessamiguebli/ecg-classification/output)
 
 5. **Run the server**
-   Finally, run the server with the following command:
+   Finally, run the servers with the following command:
+
+```bash
+python manage.py runserver
+```
 
 ```bash
 python manage.py runserver

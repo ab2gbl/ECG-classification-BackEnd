@@ -145,6 +145,29 @@ class ControllerAgent(Agent):
                 if 4 not in steps:
                     print("[ControllerAgent] Final result got")
                     self.agent.result_ready.set()   
+
+            if 4 in steps:
+                print("[ControllerAgent] Sending detection data to DecisionAgent...")
+                msg = Message(to="decision@localhost")
+                msg.body = json.dumps({
+                    #"signal": self.agent.normalized_signal,
+                    #"mask": self.agent.mask,
+                    "features": self.agent.features
+                })
+                await self.send(msg)
+                print("[ControllerAgent] 📨 Sent data to DecisionAgent")
+
+                # Wait for response
+                response = await self.receive(timeout=30)
+                if response:
+                    print("[ControllerAgent] ✅ Received response from DecisionAgent")
+                else:
+                    print("[ControllerAgent] ❌ No response from DecisionAgent")
+
+
+                self.agent.final_result.update(json.loads(response.body))
+                print("[ControllerAgent] Final result got")
+                self.agent.result_ready.set()    
             
             
 

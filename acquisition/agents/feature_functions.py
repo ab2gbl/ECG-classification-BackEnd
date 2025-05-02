@@ -2,9 +2,28 @@ import numpy as np
 from scipy.stats import skew, kurtosis, entropy
 from scipy.signal import find_peaks
 from tqdm import tqdm
+import numpy as np
+from scipy.stats import skew, kurtosis, entropy
+from tensorflow.keras.models import load_model
+import os
 
+
+# Preprocess qrs_wave the same way as during training
+def preprocess_qrs_wave(wave, target_length=250):
+    wave = wave.astype(np.float32)
+    # Normalize
+    wave = (wave - np.mean(wave)) / (np.std(wave) + 1e-8)
+    # Pad or truncate to target length
+    if len(wave) < target_length:
+        wave = np.pad(wave, (0, target_length - len(wave)), mode='constant')
+    else:
+        wave = wave[:target_length]
+    return wave.reshape(1, -1, 1)
 
 def extract_features_per_qrs(signal ,mask, fs=250):
+
+    model_path = os.path.join(os.path.dirname(__file__), "models", "R_detection.h5")
+    R_model = load_model(model_path)
     features_list = []
     #time = np.arange(len(signal)) / fs
     n = len(signal)
@@ -20,6 +39,8 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         qrs_ends = np.append(qrs_ends, n - 1)
     
     previous_r_index = None  # To calculate RR interval
+
+
 
 
     for i in tqdm(range(len(qrs_starts)), desc="extract features"):
@@ -88,16 +109,34 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         # Build features per beat
         f = {}
         padding = 0
+        
         if len(p_wave)>0:
           f['start'] = p_indices[0]-padding if p_indices[0] > padding else 0
+          
         else :
           f['start'] = qrs_indices[0]-padding if qrs_indices[0] > padding else 0
 
         if len(t_wave)>0:
           f['end'] = t_indices[-1]+padding if t_indices[-1] < len(signal)-padding else len(signal)
+          
         else :
           f['end'] = qrs_indices[-1]+padding if qrs_indices[-1] < len(signal)-padding else len(signal)
 
+       
+        p_start,p_end,t_start,t_end = None,None,None,None
+        if len(p_wave)>0:
+            p_start = p_indices[0]
+            p_end = p_indices[-1]
+        if len(t_wave)>0:
+            t_start = t_indices[0]
+            t_end = t_indices[-1]
+        f['qrs_start'] = qrs_indices[0]
+        f['qrs_end'] =  qrs_indices[-1]
+        f['p_start'] = p_start
+        f['p_end'] =  p_end
+        f['t_start'] = t_start
+        f['t_end'] =  t_end
+        
 
 
         f['Duree_P_ms'] = len(p_wave) / fs * 1000 if len(p_wave) > 0 else 0
@@ -142,24 +181,22 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         
         # Find first valid peak before QRS
         # Find both positive and negative peaks
-        pos_peaks, _ = find_peaks(qrs_wave, prominence=0.01)
-        neg_peaks, _ = find_peaks(-qrs_wave, prominence=0.01)
-        peaks = np.sort(np.concatenate((pos_peaks, neg_peaks)))
-        
-        
-        if len(peaks) > 0:
-            default_start = (qrs_wave[0] + qrs_wave[-1]) / 2
-            r_index = qrs_indices[peaks[np.argmax(np.abs(qrs_wave[peaks] - default_start))]]  # most prominent
+        # Apply model
+        #R_window_input = preprocess_qrs_wave(signal[f['start'] : f['end'] ])
+        R_window_input = preprocess_qrs_wave(qrs_wave)
+        prediction = R_model.predict(R_window_input,verbose=0)[0]  # shape: (250,)
+        # Find predicted R-peak
+        predicted_r_relative = np.argmax(prediction)
+        if (predicted_r_relative>len(qrs_indices)):
+            r_index = qrs_indices[-1]
         else:
-            default_start = (qrs_wave[0] + qrs_wave[-1]) / 2
-            r_index = qrs_indices[np.argmax(np.abs(signal[qrs_indices] - default_start))]
-
-
-        
+            r_index = qrs_indices[predicted_r_relative]
         
         r_amplitude = signal[r_index]
 
-        f['R_index']= r_index
+        f['R_index']= r_index# Preprocess qrs_wave the same way as during training
+
+
         f['Amplitude_R'] = r_amplitude
         # RR interval
         if previous_r_index is not None:
