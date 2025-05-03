@@ -1,61 +1,44 @@
-from .agents.acquisition_agent import AcquisitionAgent
-from .agents.segmentation_agent import SegmentationAgent
-from .agents.feature_agent import FeatureAgent
+#from .agents.acquisition_agent import AcquisitionAgent
+#from .agents.segmentation_agent import SegmentationAgent
+#from .agents.feature_agent import FeatureAgent
 from .agents.decision_agent import DecisionAgent
 from .agents.controller_agent import ControllerAgent
-from .agents.post_detection_agent import PostDetectionAgent
+#from .agents.post_detection_agent import PostDetectionAgent
 from spade.message import Message
 import asyncio
-
+from .agent_runner import AGENTS
+from .agents.controller_agent import ControllerAgent
 async def run_agent_pipeline(ecg_dat,ecg_hea,signal_start=0,signal_end=10,model=None,start=0,end=1):
-    # Initialize agents
-    a = AcquisitionAgent("acquirer@localhost", "pass")
-    s = SegmentationAgent("segmenter@localhost", "pass")
-    p = PostDetectionAgent("post_detection@localhost", "pass")
+    if end >= 4:
+        end = 4
+        d = DecisionAgent("decision@localhost", "pass")
+        await d.start()
     
-    f = FeatureAgent("feature@localhost", "pass")
-    d = DecisionAgent("decision@localhost", "pass")
-    c = ControllerAgent("controller@localhost", "pass")
-    c.set("ecg_dat", ecg_dat)
-    c.set("ecg_hea", ecg_hea)
-    c.set("model", model) if model else c.set("model", None)
-    c.set("start_step", start)
-    c.set("end_step", end)
-    c.set("signal_start", signal_start)
-    c.set("signal_end", signal_end)
+    controller = ControllerAgent("controller@localhost", "pass")
+    controller.set("ecg_dat", ecg_dat)
+    controller.set("ecg_hea", ecg_hea)
+    controller.set("model", model) if model else controller.set("model", None)
+    controller.set("start_step", start)
+    controller.set("end_step", end)
+    controller.set("signal_start", signal_start)
+    controller.set("signal_end", signal_end)
     print("starting agents")
-    await a.start()
-    await s.start()
-    await p.start()
-    await f.start()
-    await d.start()
-    await c.start()
+   
+    await controller.start()
     print("agents started")
     
 
-    # Send ECG data to start the flow
-    #msg = Message(to="segmenter@localhost")
-    #msg.body = ecg_data
-    #await a.send(msg)
-
-    # Receive result from DecisionAgent
-    await c.result_ready.wait()
+    await controller.result_ready.wait()
     print("[ControllerAgent] result_ready, waiting for final result...")
-    final_result = c.final_result
+    final_result = controller.final_result
     final_decision = final_result if final_result else "No response"
 
-    #print("signal len:",len(final_decision['normalized_signal']))
-    #print("mask len:",len(final_decision['mask']))
-    
 
     print("[ControllerAgent] Pipeline completed")
-
-    await a.stop()
-    await s.stop()
-    await p.stop()
-    await f.stop()
-    await d.stop()
-    await c.stop()
+    if end>= 4:
+        await d.stop()
+        await d.stop()
+    await controller.stop()
     print("agents stopped")
     print("return now")
     return final_decision

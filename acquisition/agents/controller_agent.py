@@ -49,7 +49,7 @@ class ControllerAgent(Agent):
 
                 await self.send(msg)
                 print("[ControllerAgent] 📨 Sent data to AcquisitionAgent")
-
+                print(f"[ControllerAgent] JID: {self.agent.jid}")
                 # Wait for response
                 response = await self.receive(timeout=15)
                 if response:
