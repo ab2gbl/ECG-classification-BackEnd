@@ -78,7 +78,9 @@ class AcquisitionAgent(Agent):
                     
 
                     # Send result back to controller
-                    response = Message(to="controller@localhost")
+                    response = msg.make_reply()  # ✅ Key change: Use make_reply()
+                    response.set_metadata("performative", "inform")
+                    response.set_metadata("content_type", "application/json")
                     response.body = json.dumps({
                         "normalized_signal": normalized_signal.tolist()  # Your processed signal
                     })

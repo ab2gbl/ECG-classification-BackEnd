@@ -51,11 +51,25 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] 📨 Sent data to AcquisitionAgent")
                 print(f"[ControllerAgent] JID: {self.agent.jid}")
                 # Wait for response
-                response = await self.receive(timeout=15)
+                print("[ControllerAgent] Waiting for response from AcquisitionAgent...")
+                
+                response = None
+                timeout = 10  # seconds
+                interval = 0.5  # polling interval
+                elapsed = 0
+
+                while elapsed < timeout:
+                    response = await self.receive(timeout=interval)
+                    if response:
+                        break
+                    elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from AcquisitionAgent")
                 else:
+                    
                     print("[ControllerAgent] ❌ No response from AcquisitionAgent")
+                    self.agent.result_ready.set()  
+                    return 
 
 
                 self.agent.final_result.update(json.loads(response.body))
@@ -79,7 +93,17 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] 📨 Sent data to SegmentationAgent")
 
                 # Wait for response
-                response = await self.receive(timeout=60)
+                response = None
+                timeout = 60  # seconds
+                interval = 0.5  # polling interval
+                elapsed = 0
+
+                while elapsed < timeout:
+                    response = await self.receive(timeout=interval)
+                    if response:
+                        break
+                    elapsed += interval
+
                 if response:
                     print("[ControllerAgent] ✅ Received response from SegmentationAgent")
                     self.agent.mask = json.loads(response.body)["full_prediction"]
@@ -106,8 +130,16 @@ class ControllerAgent(Agent):
                 await self.send(msg)
                 print("[ControllerAgent] 📨 Sent data to PostDetectionAgent")
 
-                # Wait for response
-                response = await self.receive(timeout=30)
+                # Wait for responseresponse = None
+                timeout = 30  # seconds
+                interval = 0.5  # polling interval
+                elapsed = 0
+
+                while elapsed < timeout:
+                    response = await self.receive(timeout=interval)
+                    if response:
+                        break
+                    elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from PostDetectionAgent")
                 else:
@@ -133,7 +165,16 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] 📨 Sent data to FeaturesAgent")
 
                 # Wait for response
-                response = await self.receive(timeout=30)
+                response = None
+                timeout = 30  # seconds
+                interval = 0.5  # polling interval
+                elapsed = 0
+
+                while elapsed < timeout:
+                    response = await self.receive(timeout=interval)
+                    if response:
+                        break
+                    elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from FeaturesAgent")
                 else:
@@ -158,7 +199,16 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] 📨 Sent data to DecisionAgent")
 
                 # Wait for response
-                response = await self.receive(timeout=30)
+                response = None
+                timeout = 30  # seconds
+                interval = 0.5  # polling interval
+                elapsed = 0
+
+                while elapsed < timeout:
+                    response = await self.receive(timeout=interval)
+                    if response:
+                        break
+                    elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from DecisionAgent")
                 else:
@@ -173,4 +223,4 @@ class ControllerAgent(Agent):
 
     async def setup(self):
         print(f"[{self.jid}] ControllerAgent ready.")
-        self.add_behaviour(self.PipelineManager())
+        #self.add_behaviour(self.PipelineManager())

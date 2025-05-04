@@ -21,10 +21,10 @@ class_map = {
 class DecisionAgent(Agent):
     class Decide(CyclicBehaviour):
         async def run(self):
-            model_path = os.path.join(os.path.dirname(__file__), "models", "ecg_multi_class_model.pkl")
-            model = joblib.load(model_path)
             msg = await self.receive(timeout=10)
             if msg:
+                model_path = os.path.join(os.path.dirname(__file__), "models", "ecg_multi_class_model.pkl")
+                model = joblib.load(model_path)
                 print("[DecisionAgent] Features received:")
                 data = json.loads(msg.body)
                 features = data["features"]
@@ -48,6 +48,7 @@ class DecisionAgent(Agent):
                 })
                 await self.send(response)
                 print("[FeatureAgent] ✅ Sent processed ECG back to controller")
+                model = None
 
     async def setup(self):
         print(f"[{self.jid}] DecisionAgent started.")
