@@ -22,6 +22,7 @@ urlpatterns = [
     #PartsDetectionView
     path('PartsDetectionView/', views.PartsDetectionView.as_view()),
     path('FullDetectionView/', views.FullDetectionView.as_view()),
+    
 
 ]
 

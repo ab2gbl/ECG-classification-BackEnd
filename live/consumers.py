@@ -1,43 +1,68 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from acquisition.agents_manager import run_agent_pipeline
+from acquisition.agent_runner import AGENTS
+
+controller = AGENTS["controller"]
 
 class ECGConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
-        print("[WebSocket] Connected")
+        print("[WebSocket] ✅ Connected")
+        self.pipeline = None
+        self.is_processing = False  # Flag to block concurrent chunks
+        self.final_decision = None
 
     async def disconnect(self, close_code):
-        print("[WebSocket] Disconnected")
-
+        print("[WebSocket] ❌ Disconnected")
+        
     async def receive(self, text_data):
+        final_decision = None
+        if self.is_processing:
+            print("⚠️ Still processing previous chunk, skipping this one...")
+            await self.send(text_data=json.dumps({
+                "warning": "Still processing previous chunk. Please slow down."
+            }))
+            return
+
         data = json.loads(text_data)
         ecg_chunk = data.get("signal")
 
         if not ecg_chunk:
             await self.send(text_data=json.dumps({"error": "No ECG data provided"}))
             return
+        if len(ecg_chunk) < 250 * 60:
+            await self.send(text_data=json.dumps({"error": "ECG data chunk is too short, the pc is slow for this "}))
+            return
+        # Mark as busy
+        self.is_processing = True
 
-        # Run your agent pipeline
         try:
-            print("[WebSocket] Running agent pipeline...")
-            decision = await run_agent_pipeline(
-                ecg_dat=ecg_chunk,
-                ecg_hea=None,  # You can send this from frontend too if needed
-                signal_start=0,
-                signal_end=10,
-                model=None,  # Or pass in a model name if you want
-                start=0,
-                end=4  # Full pipeline including decision
-            )
-            print("[WebSocket] Decision received:", decision)
+            # Set data for controller agent
+            controller.set("normalized_signal", ecg_chunk)
+            
+            controller.set("start_step", 1)
+            controller.set("end_step", 4)
 
-            # Send back the decision result
+            # Create and assign pipeline behavior
+            self.pipeline = controller.PipelineManager()
+            controller.add_behaviour(self.pipeline)
+
+            print("[WebSocket] 🚀 Running agent pipeline...")
+            await controller.result_ready.wait()
+
+            print("[ControllerAgent] ✅ Result ready")
+            final_result = controller.final_result
+            final_decision = final_result if final_result else "No response"
+
             await self.send(text_data=json.dumps({
-                "prediction": decision
+                "result": final_decision
             }))
+
         except Exception as e:
-            print("[WebSocket] Error:", str(e))
+            print("[WebSocket] ❌ Error:", str(e))
             await self.send(text_data=json.dumps({
                 "error": str(e)
             }))
+
+        finally:
+            self.is_processing = False  # Allow next chunk

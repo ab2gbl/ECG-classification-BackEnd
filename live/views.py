@@ -39,7 +39,7 @@ class ECGUploadView(APIView):
                 record = wfdb.rdrecord(base_path)
                 signal = record.p_signal[:, 0]  # lead I
                 fs = record.fs
-                ecg_signal=signal[0*60*fs:5*60*fs]
+                ecg_signal=signal
                 filtered_signal = bandpass_filter(ecg_signal,fs=fs)
                 smoothed_signal = smooth_signal(filtered_signal)
                 normalized_signal = normalize_signal(smoothed_signal)

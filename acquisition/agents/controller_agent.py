@@ -83,11 +83,16 @@ class ControllerAgent(Agent):
             
               
             if 1 in steps:
+                if 0 not in steps:
+                    self.agent.normalized_signal = self.get("normalized_signal")
+                    self.agent.final_result.update({"normalized_signal": self.agent.normalized_signal})
+                    
+                model = self.get("model") if self.get("model") is not None else None 
                 print("[ControllerAgent] Sending ECG data...")
                 msg = Message(to="segmenter@localhost")
                 msg.body = json.dumps({
                     "signal": self.agent.normalized_signal,
-                    "model": self.get("model")
+                    "model": model
                 })
                 await self.send(msg)
                 print("[ControllerAgent] 📨 Sent data to SegmentationAgent")
@@ -219,7 +224,7 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] Final result got")
                 self.agent.result_ready.set()    
             
-            
+       
 
     async def setup(self):
         print(f"[{self.jid}] ControllerAgent ready.")

@@ -21,7 +21,7 @@ class_map = {
 class DecisionAgent(Agent):
     class Decide(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=10)
+            msg = await self.receive(timeout=5)
             if msg:
                 model_path = os.path.join(os.path.dirname(__file__), "models", "ecg_multi_class_model.pkl")
                 model = joblib.load(model_path)
