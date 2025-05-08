@@ -9,6 +9,9 @@ import json
 import asyncio
 import base64
 from asyncio import Event
+from ..models import Signal, SignalFeatures
+from asgiref.sync import sync_to_async
+
 class ControllerAgent(Agent):
     def __init__(self, jid, password):
         super().__init__(jid, password)
@@ -17,11 +20,20 @@ class ControllerAgent(Agent):
         self.result_ready = Event()
         self.mask = None
         self.features = None
+    def reset_result(self):
+        self.final_result = {}
+        self.normalized_signal = None
+        self.result_ready.clear()
+        self.result_ready = Event()
+        self.mask = None
+        self.features = None
+
+    
     class PipelineManager(OneShotBehaviour):
         async def run(self):
             print("[ControllerAgent] Starting pipeline...")
             start_step = self.get("start_step") if self.get("start_step") is not None else 0
-            end_step = self.get("end_step") if self.get("end_step") is not None else 4
+            end_step = self.get("end_step") if self.get("end_step") is not None else 5
 
             
             steps = range(start_step, end_step + 1)
@@ -221,8 +233,40 @@ class ControllerAgent(Agent):
 
 
                 self.agent.final_result.update(json.loads(response.body))
-                print("[ControllerAgent] Final result got")
+                if 5 not in steps:
+                    print("[ControllerAgent] Final result got")
+                    self.agent.result_ready.set()    
+            
+            if 5 in steps:
+                print("[ControllerAgent] start saving data")
+                
+                msg = Message(to="storage@localhost")
+                msg.body = json.dumps({
+                    "name": self.get("name"),
+                    "normalized_signal": self.agent.normalized_signal,
+                    "full_prediction": self.agent.mask,
+                    "features": self.agent.final_result["features"]
+                })
+                await self.send(msg)
+                # Wait for response
+                response = None
+                timeout = 30  # seconds
+                interval = 0.5  # polling interval
+                elapsed = 0
+
+                while elapsed < timeout:
+                    response = await self.receive(timeout=interval)
+                    if response:
+                        break
+                    elapsed += interval
+                if response:
+                    print("[ControllerAgent] ✅ Received response from Storage agent")
+                else:
+                    print("[ControllerAgent] ❌ No response from Storage agent")
+
                 self.agent.result_ready.set()    
+                print("[ControllerAgent] Saved signal mask and features data")
+
             
        
 

@@ -28,19 +28,17 @@ class DecisionAgent(Agent):
                 print("[DecisionAgent] Features received:")
                 data = json.loads(msg.body)
                 features = data["features"]
-                #print(f"[DecisionAgent] Got features {features}")
-                #print(f"[DecisionAgent] Got features {features[0]}")
-
+                
+                # Create DataFrame and exclude beat_number from prediction
                 df = pd.DataFrame(features)
+                df = df.drop('beat_number', axis=1)  # Remove beat_number column
                 df = df[['R_index'] + [col for col in df.columns if col != 'R_index']]
                 y_pred = model.predict(df)
 
-
-#               Add predictions to each dictionary in the original list
+                # Add predictions to each dictionary in the original list
                 for i, feature_dict in enumerate(features):
                     Type = class_map[int(y_pred[i])]
                     feature_dict["Type"] = Type
-                # Extract features
                 
                 response = Message(to="controller@localhost")
                 response.body = json.dumps({

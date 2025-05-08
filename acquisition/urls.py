@@ -18,9 +18,6 @@ from django.urls import path,include
 from . import views 
 urlpatterns = [
     #ProcessECGView
-    path('ProcessECGView/', views.ProcessECGView.as_view()),
-    #PartsDetectionView
-    path('PartsDetectionView/', views.PartsDetectionView.as_view()),
     path('FullDetectionView/', views.FullDetectionView.as_view()),
     
 

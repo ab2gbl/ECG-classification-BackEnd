@@ -40,17 +40,16 @@ def extract_features_per_qrs(signal ,mask, fs=250):
     
     previous_r_index = None  # To calculate RR interval
 
-
-
-
     for i in tqdm(range(len(qrs_starts)), desc="extract features"):
-
+        f = {}
+        # Add beat number (1-based indexing)
+        f['beat_number'] = i + 1
+        
         p_wave = np.array([])
         qrs_wave = np.array([])
         t_wave = np.array([])
         p_indices = np.array([])
         t_indices = np.array([])
-
 
         qrs_start = qrs_starts[i]
         # Find QRS end within the current segment
@@ -107,7 +106,6 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         #print("p_indices,t_indices:",len(p_indices),len(t_indices))
 
         # Build features per beat
-        f = {}
         padding = 0
         
         if len(p_wave)>0:
