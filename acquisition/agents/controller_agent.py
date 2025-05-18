@@ -208,8 +208,6 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] Sending detection data to DecisionAgent...")
                 msg = Message(to="decision@localhost")
                 msg.body = json.dumps({
-                    #"signal": self.agent.normalized_signal,
-                    #"mask": self.agent.mask,
                     "features": self.agent.features
                 })
                 await self.send(msg)
@@ -231,21 +229,56 @@ class ControllerAgent(Agent):
                 else:
                     print("[ControllerAgent] ❌ No response from DecisionAgent")
 
-
                 self.agent.final_result.update(json.loads(response.body))
                 if 5 not in steps:
                     print("[ControllerAgent] Final result got")
-                    self.agent.result_ready.set()    
+                    self.agent.result_ready.set()
             
             if 5 in steps:
-                print("[ControllerAgent] start saving data")
-                
-                msg = Message(to="storage@localhost")
+                print("[ControllerAgent] Sending features to SignalClassifierAgent...")
+                msg = Message(to="signal_classifier@localhost")
                 msg.body = json.dumps({
                     "name": self.get("name"),
                     "normalized_signal": self.agent.normalized_signal,
                     "full_prediction": self.agent.mask,
                     "features": self.agent.final_result["features"]
+                })
+                await self.send(msg)
+                print("[ControllerAgent] 📨 Sent data to SignalClassifierAgent")
+
+                # Wait for response
+                response = None
+                timeout = 30  # seconds
+                interval = 0.5  # polling interval
+                elapsed = 0
+
+                while elapsed < timeout:
+                    response = await self.receive(timeout=interval)
+                    if response:
+                        break
+                    elapsed += interval
+                if response:
+                    print("[ControllerAgent] ✅ Received response from SignalClassifierAgent")
+                else:
+                    print("[ControllerAgent] ❌ No response from SignalClassifierAgent")
+
+                self.agent.final_result.update(json.loads(response.body))
+                if 6 not in steps:
+                    print("[ControllerAgent] Final result got")
+                    self.agent.result_ready.set()
+
+            if 6 in steps:
+                print("[ControllerAgent] start saving data")
+                
+                msg = Message(to="storage@localhost")
+                print("[ControllerAgent] name is ", self.get("name"))
+                msg.body = json.dumps({
+                    "name": self.get("name"),
+                    "normalized_signal": self.agent.normalized_signal,
+                    "full_prediction": self.agent.mask,
+                    "features": self.agent.final_result["features"],
+                    "signal_type": self.agent.final_result["signal_type"],
+                    "signal_features": self.agent.final_result["signal_features"]
                 })
                 await self.send(msg)
                 # Wait for response

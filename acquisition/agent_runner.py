@@ -8,6 +8,7 @@ from .agents.decision_agent import DecisionAgent
 from .agents.post_detection_agent import PostDetectionAgent
 from .agents.controller_agent import ControllerAgent
 from .agents.storage_agent import StorageAgent
+from .agents.signal_classifier_agent import SignalClassifierAgent
 import atexit
 
     #AGENTS["acquisition"] = AcquisitionAgent("acquirer@localhost", "pass")
@@ -46,6 +47,8 @@ async def start_agents():
         AGENTS["feature"] = FeatureAgent("feature@localhost", "pass")
     if "decision" not in AGENTS:
         AGENTS["decision"] = DecisionAgent("decision@localhost", "pass")
+    if "signal_classifier" not in AGENTS:
+        AGENTS["signal_classifier"] = SignalClassifierAgent("signal_classifier@localhost", "pass")
     if "storage" not in AGENTS:
         AGENTS["storage"] = StorageAgent("storage@localhost", "pass")
     if "controller" not in AGENTS:
