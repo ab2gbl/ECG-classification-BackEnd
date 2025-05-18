@@ -1,7 +1,6 @@
 #from .agents.acquisition_agent import AcquisitionAgent
 #from .agents.segmentation_agent import SegmentationAgent
 #from .agents.feature_agent import FeatureAgent
-from .agents.decision_agent import DecisionAgent
 from .agents.controller_agent import ControllerAgent
 #from .agents.post_detection_agent import PostDetectionAgent
 from spade.message import Message

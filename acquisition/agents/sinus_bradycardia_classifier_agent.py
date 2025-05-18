@@ -4,7 +4,9 @@ from spade.message import Message
 import pandas as pd
 from collections import Counter
 import json
-import joblib , os
+import joblib
+import os
+
 def flatten_feature_dict(d, keep_sums_for=None, keep_means_for=None):
     if keep_sums_for is None:
         keep_sums_for = {'T_inversion', 'Premature_beat', 'Bigeminy', 'Trigeminy'}
@@ -38,9 +40,9 @@ def standardize_feature_keys(features):
         # Convert key to lowercase
         new_key = key.lower()
         # Fix specific ratio names
-        if new_key == "t/r_ratio" or new_key == "t/r_ratio_min" or new_key == "t/r_ratio_max" or new_key == "t/r_ratio_std":
+        if new_key == "t/r_ratio" or new_key == "t/r_ratio_mean" or new_key == "t/r_ratio_min" or new_key == "t/r_ratio_max" or new_key == "t/r_ratio_std":
             new_key = new_key.replace("t/r_ratio", "t_r_ratio")
-        elif new_key == "p/r_ratio" or new_key == "p/r_ratio_min" or new_key == "p/r_ratio_max" or new_key == "p/r_ratio_std":
+        elif new_key == "p/r_ratio" or new_key == "p/r_ratio_mean" or new_key == "p/r_ratio_min" or new_key == "p/r_ratio_max" or new_key == "p/r_ratio_std":
             new_key = new_key.replace("p/r_ratio", "p_r_ratio")
         standardized[new_key] = value
     return standardized
@@ -110,31 +112,36 @@ def extract_signal_features(df_signal):
     # Then standardize the keys
     return flattened_features
 
-class SignalClassifierAgent(Agent):
+class SinusBradycardiaClassifierAgent(Agent):
     class ClassifySignal(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=5)
             if msg:
-                print("[SignalClassifierAgent] 📥 Received signal features for classification")
+                print("[SinusBradycardiaClassifierAgent] 📥 Received signal features for classification")
                 try:
                     data = json.loads(msg.body)
                     beat_features = data.get("features", [])
-                    print("[SignalClassifierAgent] got features:", len(beat_features))
+                    print("[SinusBradycardiaClassifierAgent] got features:", len(beat_features))
                     
                     beat_features = pd.DataFrame(beat_features)
                     signal_features = extract_signal_features(beat_features)
-                    # print("signal_features:", signal_features)
-                    model_path = os.path.join(os.path.dirname(__file__), "models", "normal_vs_abnormal_model.pkl")
+                    
+                    # Load the model for sinus bradycardia classification
+                    model_path = os.path.join(os.path.dirname(__file__), "models", "sb_vs_else_model.pkl")
                     model = joblib.load(model_path)
-                    #features_dict = signal_features[0]
+                    
                     df = pd.DataFrame([signal_features])
                     y_pred = model.predict(df)
                     y_pred = y_pred[0]
+                    
+                    # Classify as Sinus bradycardia (0) or other abnormal (1)
                     if y_pred == 0:
-                        signal_type = "Normal"
+                        signal_type = "Abnormal: Sinus bradycardia"
                     else:
-                        signal_type = "Abnormal"
+                        signal_type = "Abnormal: Not Sinus bradycardia"
+                    
                     signal_features = standardize_feature_keys(signal_features)
+                    
                     # Send response to controller
                     response = Message(to="controller@localhost")
                     response.body = json.dumps({
@@ -142,10 +149,10 @@ class SignalClassifierAgent(Agent):
                         "signal_type": signal_type
                     })
                     await self.send(response)
-                    print("[SignalClassifierAgent] ✅ Sent classified features to controller")
+                    print("[SinusBradycardiaClassifierAgent] ✅ Sent classified features to controller")
                 except Exception as e:
-                    print(f"[SignalClassifierAgent] ❌ Error processing features: {e}")
+                    print(f"[SinusBradycardiaClassifierAgent] ❌ Error processing features: {e}")
 
     async def setup(self):
-        print(f"[{self.jid}] SignalClassifierAgent ready.")
+        print(f"[{self.jid}] SinusBradycardiaClassifierAgent ready.")
         self.add_behaviour(self.ClassifySignal()) 

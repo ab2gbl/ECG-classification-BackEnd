@@ -1,7 +1,5 @@
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
-
-from spade.agent import Agent
 from spade.message import Message
 import json
 import numpy as np
@@ -17,15 +15,15 @@ class_map = {
      4 : 'V',
     5:'else'
 }
-# Load the saved model
-class DecisionAgent(Agent):
-    class Decide(CyclicBehaviour):
+
+class BeatClassifierAgent(Agent):
+    class ClassifyBeat(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=5)
             if msg:
                 model_path = os.path.join(os.path.dirname(__file__), "models", "ecg_multi_class_model.pkl")
                 model = joblib.load(model_path)
-                print("[DecisionAgent] Features received:")
+                print("[BeatClassifierAgent] Features received:")
                 data = json.loads(msg.body)
                 features = data["features"]
                 
@@ -45,9 +43,9 @@ class DecisionAgent(Agent):
                     "features": features # Your processed signal
                 })
                 await self.send(response)
-                print("[FeatureAgent] ✅ Sent processed ECG back to controller")
+                print("[BeatClassifierAgent] ✅ Sent processed ECG back to controller")
                 model = None
 
     async def setup(self):
-        print(f"[{self.jid}] DecisionAgent started.")
-        self.add_behaviour(self.Decide())
+        print(f"[{self.jid}] BeatClassifierAgent started.")
+        self.add_behaviour(self.ClassifyBeat())

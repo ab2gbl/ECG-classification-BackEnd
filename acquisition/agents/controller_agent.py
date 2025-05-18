@@ -1,7 +1,7 @@
 from .acquisition_agent import AcquisitionAgent
 from .segmentation_agent import SegmentationAgent
 from .feature_agent import FeatureAgent
-from .decision_agent import DecisionAgent
+from .beat_classifier_agent import BeatClassifierAgent
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
@@ -205,13 +205,13 @@ class ControllerAgent(Agent):
                     self.agent.result_ready.set()   
 
             if 4 in steps:
-                print("[ControllerAgent] Sending detection data to DecisionAgent...")
-                msg = Message(to="decision@localhost")
+                print("[ControllerAgent] Sending detection data to BeatClassifierAgent...")
+                msg = Message(to="beat_classifier@localhost")
                 msg.body = json.dumps({
                     "features": self.agent.features
                 })
                 await self.send(msg)
-                print("[ControllerAgent] 📨 Sent data to DecisionAgent")
+                print("[ControllerAgent] 📨 Sent data to BeatClassifierAgent")
 
                 # Wait for response
                 response = None
@@ -225,9 +225,9 @@ class ControllerAgent(Agent):
                         break
                     elapsed += interval
                 if response:
-                    print("[ControllerAgent] ✅ Received response from DecisionAgent")
+                    print("[ControllerAgent] ✅ Received response from BeatClassifierAgent")
                 else:
-                    print("[ControllerAgent] ❌ No response from DecisionAgent")
+                    print("[ControllerAgent] ❌ No response from BeatClassifierAgent")
 
                 self.agent.final_result.update(json.loads(response.body))
                 if 5 not in steps:
@@ -235,8 +235,8 @@ class ControllerAgent(Agent):
                     self.agent.result_ready.set()
             
             if 5 in steps:
-                print("[ControllerAgent] Sending features to SignalClassifierAgent...")
-                msg = Message(to="signal_classifier@localhost")
+                print("[ControllerAgent] Sending features to NormalVsAbnormalAgent...")
+                msg = Message(to="normal_vs_abnormal@localhost")
                 msg.body = json.dumps({
                     "name": self.get("name"),
                     "normalized_signal": self.agent.normalized_signal,
@@ -244,7 +244,7 @@ class ControllerAgent(Agent):
                     "features": self.agent.final_result["features"]
                 })
                 await self.send(msg)
-                print("[ControllerAgent] 📨 Sent data to SignalClassifierAgent")
+                print("[ControllerAgent] 📨 Sent data to NormalVsAbnormalAgent")
 
                 # Wait for response
                 response = None
@@ -258,11 +258,43 @@ class ControllerAgent(Agent):
                         break
                     elapsed += interval
                 if response:
-                    print("[ControllerAgent] ✅ Received response from SignalClassifierAgent")
+                    print("[ControllerAgent] ✅ Received response from NormalVsAbnormalAgent")
                 else:
-                    print("[ControllerAgent] ❌ No response from SignalClassifierAgent")
+                    print("[ControllerAgent] ❌ No response from NormalVsAbnormalAgent")
 
                 self.agent.final_result.update(json.loads(response.body))
+                
+                # If the signal is abnormal, send it to the sinus bradycardia classifier
+                if self.agent.final_result["signal_type"] == "Abnormal":
+                    print("[ControllerAgent] Signal is abnormal, sending to SinusBradycardiaClassifierAgent...")
+                    msg = Message(to="sinus_bradycardia_classifier@localhost")
+                    msg.body = json.dumps({
+                        "name": self.get("name"),
+                        "normalized_signal": self.agent.normalized_signal,
+                        "full_prediction": self.agent.mask,
+                        "features": self.agent.final_result["features"]
+                    })
+                    await self.send(msg)
+                    print("[ControllerAgent] 📨 Sent data to SinusBradycardiaClassifierAgent")
+
+                    # Wait for response
+                    response = None
+                    timeout = 30  # seconds
+                    interval = 0.5  # polling interval
+                    elapsed = 0
+
+                    while elapsed < timeout:
+                        response = await self.receive(timeout=interval)
+                        if response:
+                            break
+                        elapsed += interval
+                    if response:
+                        print("[ControllerAgent] ✅ Received response from SinusBradycardiaClassifierAgent")
+                        # Update the signal type with the more specific classification
+                        self.agent.final_result["signal_type"] = json.loads(response.body)["signal_type"]
+                    else:
+                        print("[ControllerAgent] ❌ No response from SinusBradycardiaClassifierAgent")
+
                 if 6 not in steps:
                     print("[ControllerAgent] Final result got")
                     self.agent.result_ready.set()

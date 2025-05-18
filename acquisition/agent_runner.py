@@ -4,18 +4,19 @@ import asyncio
 from .agents.acquisition_agent import AcquisitionAgent
 from .agents.segmentation_agent import SegmentationAgent
 from .agents.feature_agent import FeatureAgent
-from .agents.decision_agent import DecisionAgent
+from .agents.beat_classifier_agent import BeatClassifierAgent
 from .agents.post_detection_agent import PostDetectionAgent
 from .agents.controller_agent import ControllerAgent
 from .agents.storage_agent import StorageAgent
-from .agents.signal_classifier_agent import SignalClassifierAgent
+from .agents.normal_vs_abnormal_agent import NormalVsAbnormalAgent
+from .agents.sinus_bradycardia_classifier_agent import SinusBradycardiaClassifierAgent
 import atexit
 
     #AGENTS["acquisition"] = AcquisitionAgent("acquirer@localhost", "pass")
     #AGENTS["segmenter"] = SegmentationAgent("segmenter@localhost", "pass")
     #AGENTS["post_detection"] = PostDetectionAgent("post_detection@localhost", "pass")
     #AGENTS["feature"] = FeatureAgent("feature@localhost", "pass")
-    #AGENTS["decision"] = DecisionAgent("decision@localhost", "pass")
+    #AGENTS["beat_classifier"] = BeatClassifierAgent("beat_classifier@localhost", "pass")
     #AGENTS["controller"] = ControllerAgent("controller@localhost", "pass")
 
 # agents_app/agent_runner.py
@@ -45,10 +46,12 @@ async def start_agents():
         AGENTS["post_detection"] = PostDetectionAgent("post_detection@localhost", "pass")
     if "feature" not in AGENTS:
         AGENTS["feature"] = FeatureAgent("feature@localhost", "pass")
-    if "decision" not in AGENTS:
-        AGENTS["decision"] = DecisionAgent("decision@localhost", "pass")
-    if "signal_classifier" not in AGENTS:
-        AGENTS["signal_classifier"] = SignalClassifierAgent("signal_classifier@localhost", "pass")
+    if "beat_classifier" not in AGENTS:
+        AGENTS["beat_classifier"] = BeatClassifierAgent("beat_classifier@localhost", "pass")
+    if "normal_vs_abnormal" not in AGENTS:
+        AGENTS["normal_vs_abnormal"] = NormalVsAbnormalAgent("normal_vs_abnormal@localhost", "pass")
+    if "sinus_bradycardia_classifier" not in AGENTS:
+        AGENTS["sinus_bradycardia_classifier"] = SinusBradycardiaClassifierAgent("sinus_bradycardia_classifier@localhost", "pass")
     if "storage" not in AGENTS:
         AGENTS["storage"] = StorageAgent("storage@localhost", "pass")
     if "controller" not in AGENTS:
