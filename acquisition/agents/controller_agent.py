@@ -263,6 +263,38 @@ class ControllerAgent(Agent):
                     print("[ControllerAgent] ❌ No response from SignalClassifierAgent")
 
                 self.agent.final_result.update(json.loads(response.body))
+                
+                # If the signal is abnormal, send it to the abnormal signal classifier
+                if self.agent.final_result["signal_type"] == "Abnormal":
+                    print("[ControllerAgent] Signal is abnormal, sending to AbnormalSignalClassifierAgent...")
+                    msg = Message(to="abnormal_signal_classifier@localhost")
+                    msg.body = json.dumps({
+                        "name": self.get("name"),
+                        "normalized_signal": self.agent.normalized_signal,
+                        "full_prediction": self.agent.mask,
+                        "features": self.agent.final_result["features"]
+                    })
+                    await self.send(msg)
+                    print("[ControllerAgent] 📨 Sent data to AbnormalSignalClassifierAgent")
+
+                    # Wait for response
+                    response = None
+                    timeout = 30  # seconds
+                    interval = 0.5  # polling interval
+                    elapsed = 0
+
+                    while elapsed < timeout:
+                        response = await self.receive(timeout=interval)
+                        if response:
+                            break
+                        elapsed += interval
+                    if response:
+                        print("[ControllerAgent] ✅ Received response from AbnormalSignalClassifierAgent")
+                        # Update the signal type with the more specific classification
+                        self.agent.final_result["signal_type"] = json.loads(response.body)["signal_type"]
+                    else:
+                        print("[ControllerAgent] ❌ No response from AbnormalSignalClassifierAgent")
+
                 if 6 not in steps:
                     print("[ControllerAgent] Final result got")
                     self.agent.result_ready.set()
