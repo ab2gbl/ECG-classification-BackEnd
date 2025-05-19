@@ -20,7 +20,7 @@ def convert_numpy(obj):
 class FeatureAgent(Agent):
     class ExtractFeatures(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=5)
+            msg = await self.receive(timeout=1)
             if msg:
                 print("[FeatureAgent] Got segmentation")
                 # Extract features

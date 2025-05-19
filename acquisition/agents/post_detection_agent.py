@@ -9,7 +9,7 @@ from .post_detection_functions import *
 class PostDetectionAgent(Agent):
     class PostProcess(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=5)
+            msg = await self.receive(timeout=1)
             if msg:
                 print("[PostDetectionAgent] Got segmentation:")
                 data = json.loads(msg.body)

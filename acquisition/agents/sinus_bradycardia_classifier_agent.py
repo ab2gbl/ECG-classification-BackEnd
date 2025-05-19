@@ -115,7 +115,7 @@ def extract_signal_features(df_signal):
 class SinusBradycardiaClassifierAgent(Agent):
     class ClassifySignal(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=5)
+            msg = await self.receive(timeout=1)
             if msg:
                 print("[SinusBradycardiaClassifierAgent] 📥 Received signal features for classification")
                 try:

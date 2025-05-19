@@ -115,7 +115,7 @@ def extract_signal_features(df_signal):
 class AbnormalSignalClassifierAgent(Agent):
     class ClassifySignal(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=5)
+            msg = await self.receive(timeout=1)
             if msg:
                 print("[AbnormalSignalClassifierAgent] 📥 Received signal features for classification")
                 try:

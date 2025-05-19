@@ -41,7 +41,7 @@ class AcquisitionAgent(Agent):
     class WaitForData(CyclicBehaviour):
         
         async def run(self):
-            msg = await self.receive(timeout=5)
+            msg = await self.receive(timeout=1)
             if msg:
                 print("[AcquisitionAgent] 📥 Received ECG data from controller")
                 data = json.loads(msg.body)

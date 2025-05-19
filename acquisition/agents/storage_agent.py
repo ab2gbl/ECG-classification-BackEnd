@@ -10,7 +10,7 @@ from acquisition.models import Signal, BeatFeatures, SignalFeatures  # Updated m
 class StorageAgent(Agent):
     class StoreResults(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=5)
+            msg = await self.receive(timeout=1)
             if msg:
                 print("[StorageAgent] 📥 Received message to store signal")
                 try:

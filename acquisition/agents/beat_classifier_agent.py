@@ -19,7 +19,7 @@ class_map = {
 class BeatClassifierAgent(Agent):
     class ClassifyBeat(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=5)
+            msg = await self.receive(timeout=1)
             if msg:
                 model_path = os.path.join(os.path.dirname(__file__), "models", "ecg_multi_class_model.pkl")
                 model = joblib.load(model_path)

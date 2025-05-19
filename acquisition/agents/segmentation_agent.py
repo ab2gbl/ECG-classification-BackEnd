@@ -80,7 +80,7 @@ def post_process_predictions(predictions, threshold=0.5, min_duration=20):
 class SegmentationAgent(Agent):
     class ReceiveAndSegment(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=5)  # Wait up to 10 seconds
+            msg = await self.receive(timeout=1)  # Wait up to 10 seconds
             if msg:
                 print("[SegmentationAgent] Received ECG ✅")
                 data = json.loads(msg.body)
