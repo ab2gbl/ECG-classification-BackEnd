@@ -36,7 +36,13 @@ class ECGUploadView(APIView):
                 f.write(dat_bytes)
 
             try:
-                record = wfdb.rdrecord(base_path)
+                
+                try:
+                    # Try to read all 15 channels (requires .xyz file to exist)
+                    record = wfdb.rdrecord(base_path)
+                except FileNotFoundError:
+                    # If .xyz file is missing, fall back to first 12 channels (standard ECG)
+                    record = wfdb.rdrecord(base_path, channels=list(range(12)))
                 signal = record.p_signal[:, 0]  # lead I
                 fs = record.fs
                 ecg_signal=signal

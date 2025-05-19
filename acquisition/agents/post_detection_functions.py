@@ -39,8 +39,6 @@ def merge_close_waves(predicted, max_gap=10):
             # Fill the gap between current and next with 1s
             predicted[current:next_ + 1] = target_class
 
-
-
   return predicted
 
 
@@ -109,13 +107,6 @@ def remove_irrelevant_waves(predicted,start_search=2,end_search=5):
                 break
       #print("end:",end)
       predicted[end+1:] = 0
-
-
-
-
-
-
-
     return (predicted)
 
 # Now, i is the index of the first value that is NOT 1 after the P wave segment
@@ -171,8 +162,8 @@ def check_repeated_waves(predicted):
     return cleaned
 
 
-
 from scipy.signal import find_peaks
+
 
 def fix_before_P(signal,mask,p_start,p_end,slope_threshold=0.02):
   diff_signal = np.diff([signal[p_start],signal[p_start-5]])  # check around the Q point for slope change
@@ -236,7 +227,7 @@ def fix_P(signal, mask):
           mask, p_start = fix_before_P(signal, mask,p_start,p_end)
           j=0
           #print(p_end)
-          while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and mask[p_end + 1] == 0:
+          while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and p_end + 1 < len(mask) and mask[p_end + 1] == 0:
             j += 1
             p_end += 1
             mask[p_end] = 1
@@ -307,7 +298,7 @@ def fix_P(signal, mask):
             if peak == "after":
                 mask, p_start = fix_before_P(signal, mask,p_start,p_end)
                 j=0
-                while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and mask[p_end + 1] == 0:
+                while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and p_end + 1 < len(mask) and mask[p_end + 1] == 0:
                   j += 1
                   p_end += 1
                   mask[p_end] = 1
@@ -328,6 +319,12 @@ def fix_P(signal, mask):
         #print (fixed_p_info)
 
     return mask
+
+
+import numpy as np
+from scipy.signal import find_peaks
+
+
 
 import numpy as np
 from scipy.signal import find_peaks
@@ -359,7 +356,7 @@ def fast_fix_QRS(signal, mask, fs=250):
         qrs_end = qrs_ends[i]
         #before_qrs_end = qrs_ends[i-1] if i > 0 else 0
         # Adjust QRS start based on preceding P wave
-        p_indices = np.where(mask[max(0, qrs_start-100):qrs_start] == 1)[0]
+        p_indices = np.where(mask[max(0, qrs_start-200):qrs_start] == 1)[0]
         valid_p = []
         if len(p_indices) > 0:
             # Check from the end backwards
@@ -457,3 +454,4 @@ def fast_fix_QRS(signal, mask, fs=250):
             
         
     return mask
+

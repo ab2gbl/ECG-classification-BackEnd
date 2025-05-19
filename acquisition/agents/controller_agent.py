@@ -197,15 +197,28 @@ class ControllerAgent(Agent):
                 else:
                     print("[ControllerAgent] ❌ No response from FeaturesAgent")
 
-
+                
+                    
                 self.agent.final_result.update(json.loads(response.body))
                 self.agent.features = json.loads(response.body)["features"]
+                print("[ControllerAgent] Features received:", len(self.agent.features))
+                    
+                    # Check if no beats were detected
+                if len(self.agent.features) == 0:
+                        print("[ControllerAgent] ℹ️ No beats detected, skipping beat classification")
+                        self.agent.final_result.update({
+                            "features": [],
+                            "status": "no_beats"
+                        })
+                        self.agent.result_ready.set()
+                        return
+
                 if 4 not in steps:
                     print("[ControllerAgent] Final result got")
-                    self.agent.result_ready.set()   
+                    self.agent.result_ready.set()
 
             if 4 in steps:
-                print("[ControllerAgent] Sending detection data to BeatClassifierAgent...")
+                print("[ControllerAgent] Sending features to BeatClassifierAgent...")
                 msg = Message(to="beat_classifier@localhost")
                 msg.body = json.dumps({
                     "features": self.agent.features
@@ -224,8 +237,20 @@ class ControllerAgent(Agent):
                     if response:
                         break
                     elapsed += interval
+
                 if response:
                     print("[ControllerAgent] ✅ Received response from BeatClassifierAgent")
+                    response_data = json.loads(response.body)
+                    
+                    # Check if no beats were detected
+                    if response_data.get("status") == "no_beats":
+                        print("[ControllerAgent] ℹ️ No beats detected in classification")
+                        self.agent.final_result.update({
+                            "features": [],
+                            "status": "no_beats"
+                        })
+                        print("[ControllerAgent] Final result got")
+                        self.agent.result_ready.set()
                 else:
                     print("[ControllerAgent] ❌ No response from BeatClassifierAgent")
 
@@ -233,7 +258,7 @@ class ControllerAgent(Agent):
                 if 5 not in steps:
                     print("[ControllerAgent] Final result got")
                     self.agent.result_ready.set()
-            
+
             if 5 in steps:
                 print("[ControllerAgent] Sending features to NormalVsAbnormalAgent...")
                 msg = Message(to="normal_vs_abnormal@localhost")

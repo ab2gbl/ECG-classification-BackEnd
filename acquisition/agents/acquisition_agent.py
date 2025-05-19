@@ -56,7 +56,13 @@ class AcquisitionAgent(Agent):
                     with open(base_path + ".hea", "wb") as f:
                         f.write(hea_bytes)
                                             
-                    record = wfdb.rdrecord(base_path)
+                    try:
+                        # Try to read all 15 channels (requires .xyz file to exist)
+                        record = wfdb.rdrecord(base_path)
+                    except FileNotFoundError:
+                        # If .xyz file is missing, fall back to first 12 channels (standard ECG)
+                        record = wfdb.rdrecord(base_path, channels=list(range(12)))
+                    
 
                   # Get the signal (ECG data)
                     signal = record.p_signal[:, 0]  # lead I
