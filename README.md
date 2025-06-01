@@ -1,5 +1,7 @@
 # ECG-classification-BackEnd
 
+## 1. Project install
+
 1. **Clone this repository**  
    Run the following commands to clone the repo and navigate into the project directory:
    ```bash
@@ -55,11 +57,30 @@ pip install -r requirements.txt # --no-deps
   - [R detection](https://www.kaggle.com/models/abdessamiguebli/r-detection)
   - [Classification](https://www.kaggle.com/code/abdessamiguebli/ecg-classification/output)
 
-5. **Run the server**
-   Finally, run the servers with the following command:
+5. **Register models to ML-Flow**
+
+first run ml-flow server
 
 ```bash
-python manage.py runserver
+mlflow server --host 127.0.0.1 --port 8080
+```
+
+then run the registration script
+
+```bash
+python register_models.py
+```
+
+## 2. **Run the server**
+
+Finally, run the servers with the following command:
+
+```bash
+spade run
+```
+
+```bash
+mlflow server --host 127.0.0.1 --port 8080
 ```
 
 ```bash

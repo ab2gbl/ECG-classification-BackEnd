@@ -11,21 +11,18 @@ from scipy.signal import resample
 import json
 import base64
 from spade.template import Template
-# Bandpass filter function
-def bandpass_filter(signal, lowcut=0.5, highcut=10, fs=250, order=4):
+
+def bandpass_filter(signal, fs=250, lowcut=0.5,  highcut=15.0,  order=4):
     nyquist = 0.5 * fs
     low = lowcut / nyquist
     high = highcut / nyquist
     b, a = butter(order, [low, high], btype='band')
     return filtfilt(b, a, signal)
-
-# Signal smoothing function
+    
 def smooth_signal(data, window_size=5):
     window = np.ones(window_size) / window_size
     smoothed = np.convolve(data, window, mode='same')
     return smoothed
-
-# Signal normalization function
 def normalize_signal(data):
     return (data - np.mean(data)) / np.std(data)
 
@@ -72,9 +69,9 @@ class AcquisitionAgent(Agent):
                     if end > len(signal)/fs:
                         end = len(signal)/fs
                     ecg_signal=signal[int(start*fs):int(end*fs)]
-                    #ecg_signal=signal[:]
                     
-                    # Optionally apply preprocessing (bandpass filter, smoothing, normalization)
+                    
+
                     filtered_signal = bandpass_filter(ecg_signal,fs=fs)
                     smoothed_signal = smooth_signal(filtered_signal)
                     normalized_signal = normalize_signal(smoothed_signal)
@@ -84,11 +81,11 @@ class AcquisitionAgent(Agent):
                     
 
                     # Send result back to controller
-                    response = msg.make_reply()  # ✅ Key change: Use make_reply()
+                    response = msg.make_reply()  
                     response.set_metadata("performative", "inform")
                     response.set_metadata("content_type", "application/json")
                     response.body = json.dumps({
-                        "normalized_signal": normalized_signal.tolist()  # Your processed signal
+                        "normalized_signal": normalized_signal.tolist()  
                     })
                     await self.send(response)
                     print("[AcquisitionAgent] ✅ Sent processed ECG back to controller")
