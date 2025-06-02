@@ -1,4 +1,8 @@
 {
-    "TCN_model_run_id": "5e45539bc47f40b8a5c37bfe9b287b68",
-    "UNet_model_run_id": "db9f49020c9a443494e92e338e72ce9e"
+    "TCN_model_run_id": "b01632dd60614219840571d66cb67b42",
+    "UNet_model_run_id": "30c476e42eac4a78a22e3d5521bb04e2",
+    "R_detection_model_run_id": "975ba2c754a841cfb2af2727fc5b2658",
+    "Beat_model_run_id": "04897f0d5c6244be80dadf85ad635212",
+    "Signal_normality_model_run_id": "bd68aaaa6fd04ec993f62df490802760",
+    "Signal_SB_model_run_id": "9c835a164bf441168b40377f33b565ea"
 }

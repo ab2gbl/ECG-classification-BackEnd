@@ -1,14 +1,14 @@
 import numpy as np
-from scipy.stats import skew, kurtosis, entropy
-from scipy.signal import find_peaks
+import pandas as pd
 from tqdm import tqdm
-import numpy as np
-from scipy.stats import skew, kurtosis, entropy
 from tensorflow.keras.models import load_model
-import os
+import mlflow
+import globals_vars
+mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
 
-
-# Preprocess qrs_wave the same way as during training
+R_detection_run_id = globals_vars.get_R_detection()
+R_model = mlflow.keras.load_model(f"runs:/{R_detection_run_id}/model")
+print("R_model loaded successfully")
 def preprocess_qrs_wave(wave, target_length=250):
     wave = wave.astype(np.float32)
     # Normalize
@@ -22,8 +22,8 @@ def preprocess_qrs_wave(wave, target_length=250):
 
 def extract_features_per_qrs(signal ,mask, fs=250):
 
-    model_path = os.path.join(os.path.dirname(__file__), "models", "R_detection.h5")
-    R_model = load_model(model_path)
+    #model_path = os.path.join(os.path.dirname(__file__), "models", "R_detection.h5")
+    #R_model = load_model(model_path)
     features_list = []
     #time = np.arange(len(signal)) / fs
     n = len(signal)
@@ -45,6 +45,7 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         # Add beat number (1-based indexing)
         f['beat_number'] = i + 1
         
+
         p_wave = np.array([])
         qrs_wave = np.array([])
         t_wave = np.array([])
@@ -56,17 +57,15 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         qrs_end = qrs_ends[i]
         next_qrs_start = qrs_starts[i+1] if i < len(qrs_starts) - 1 else len(mask)
 
-        # Get current QRS region
+        
         qrs_indices = np.arange(qrs_start, qrs_end + 1)[mask[qrs_start:qrs_end+1] == 2]
-        #print("qrs_indices:",qrs_indices)
-        if len(qrs_indices) == 0:
+        
+        if len(qrs_indices) <= 1:
             continue
-        #print("qrs_start,end:",qrs_start,qrs_end)isnt
-
+        
         # Search for the P wave just before this QRS (no QRS or T in between)
         start_idx = qrs_ends[i-1]-1 if i > 0 else 0
         p_indices = np.where(mask[start_idx:qrs_start] == 1)[0]+start_idx
-        #p_indices = np.where(mask[:qrs_start] == 1)[0]
         valid_p = []
         for p_end in reversed(p_indices):
                 if np.all(mask[p_end:qrs_start] != 2) and np.all(mask[p_end:qrs_start] != 3):
@@ -76,19 +75,14 @@ def extract_features_per_qrs(signal ,mask, fs=250):
                     valid_p = list(range(p_start, p_end + 1))
                     break
 
-        #print("p start,end:",valid_p[0],valid_p[-1])
-
-        #
         # Search for the T wave just after this QRS (no QRS or P in between)
 
         t_indices = np.where(mask[qrs_end:next_qrs_start] == 3)[0]
         t_indices = t_indices + (qrs_end )
-        #print("t_indices:",t_indices)
-
+        
         valid_t = []
         for t_start_offset in t_indices:
             t_start = t_start_offset
-            #print("mask[qrs_end:t_start]:",mask[qrs_end:t_start])
             if np.all(mask[qrs_end+1:t_start] != 2) and np.all(mask[qrs_end+1:t_start] != 1):
                 #print("got t")
                 t_end = t_start
@@ -97,15 +91,21 @@ def extract_features_per_qrs(signal ,mask, fs=250):
                 valid_t = list(range(t_start, t_end + 1))
                 break
         # Extract samples
+        valid_p = [i for i in valid_p if i < len(signal)]
         p_wave = signal[valid_p] if valid_p else np.array([])
+        
+        qrs_indices = [i for i in qrs_indices if i < len(signal)]
+        if len(qrs_indices) <= 1:
+            continue
+        
+        qrs_indices = np.array(qrs_indices)
+        
         qrs_wave = signal[qrs_indices]
+        valid_t = [i for i in valid_t if i < len(signal)]
         t_wave = signal[valid_t] if valid_t else np.array([])
         p_indices = valid_p if valid_p else np.array([])
         t_indices = valid_t if valid_t else np.array([])
-        #print("p_wave,qrs_wave,t_wave:",len(p_wave),len(qrs_wave),len(t_wave))
-        #print("p_indices,t_indices:",len(p_indices),len(t_indices))
-
-        # Build features per beat
+        
         padding = 0
         
         if len(p_wave)>0:
@@ -120,7 +120,7 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         else :
           f['end'] = qrs_indices[-1]+padding if qrs_indices[-1] < len(signal)-padding else len(signal)
 
-       
+
         p_start,p_end,t_start,t_end = None,None,None,None
         if len(p_wave)>0:
             p_start = p_indices[0]
@@ -149,7 +149,6 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         # Amplitude_P
         if len(p_wave) > 0:
           default_start = (p_wave[0]+p_wave[-1])/2 if len(p_wave) > 0 else 0
-          #print(default_start)
           p_index = p_indices[np.argmax(np.abs(signal[p_indices]-default_start))]
           p_amplitude = signal[p_index]
           f['P_index']= p_index
@@ -159,36 +158,18 @@ def extract_features_per_qrs(signal ,mask, fs=250):
           f['Amplitude_P'] = 0
 
         # Amplitude_R
-        #default_start = p_wave[0] if len(p_wave) > 0 else signal[qrs_start]
-        '''
-        pre_start = max(0, qrs_start - 100)
-            pre_wave = signal[pre_start:qrs_start]
-            
-            # Find first valid peak before QRS
-            first_peak_before_qrs = None
-            if len(pre_wave) > 3:
-                peaks, _ = find_peaks(pre_wave, prominence=0.01)
-                for p in peaks:
-                    if mask[pre_start + p] == 0:
-                        # print("found peak before qrs")
-                        first_peak_before_qrs = pre_start + p
-                        break
-        '''
-        
-        
-        
-        # Find first valid peak before QRS
-        # Find both positive and negative peaks
-        # Apply model
-        #R_window_input = preprocess_qrs_wave(signal[f['start'] : f['end'] ])
-        R_window_input = preprocess_qrs_wave(qrs_wave)
-        prediction = R_model.predict(R_window_input,verbose=0)[0]  # shape: (250,)
+        all_wave = signal[int(f['start']):int(f['end'])]
+        all_indices = range(int(f['start']),int(f['end']))
+        R_window_input = preprocess_qrs_wave(all_wave)
+        prediction = R_model.predict(R_window_input,verbose=0)[0]  
         # Find predicted R-peak
         predicted_r_relative = np.argmax(prediction)
-        if (predicted_r_relative>len(qrs_indices)):
+       
+        if (predicted_r_relative>len(range(all_indices[0],qrs_indices[-1]))):
             r_index = qrs_indices[-1]
         else:
-            r_index = qrs_indices[predicted_r_relative]
+            predicted_r_relative = min(predicted_r_relative,len(all_indices)-1)
+            r_index = all_indices[predicted_r_relative]
         
         r_amplitude = signal[r_index]
 
@@ -200,7 +181,7 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         if previous_r_index is not None:
             f['Intervalle_RR_ms'] = (r_index - previous_r_index) / fs * 1000
         else:
-            f['Intervalle_RR_ms'] = 0  # Or np.nan if you prefer
+            f['Intervalle_RR_ms'] = np.nan   # Or np.nan if you prefer
 
         # Update previous_r_index for next beat
         previous_r_index = r_index
@@ -293,10 +274,18 @@ def extract_features_per_qrs(signal ,mask, fs=250):
         f['QRS_axis_estimate'] = axis_indicator
 
         # Heart rate
-        f['Heart_rate_bpm'] = 60000 / f['Intervalle_RR_ms'] if f['Intervalle_RR_ms'] > 0 else 0
+        if pd.notna(f['Intervalle_RR_ms']) and f['Intervalle_RR_ms'] > 0:
+            f['Heart_rate_bpm'] = 60000 / f['Intervalle_RR_ms']
+        else:
+            f['Heart_rate_bpm'] = np.nan  # or 0 if your pipeline prefers
 
         # Premature beat detection (basic heuristic)
-        recent_rrs = [beat['Intervalle_RR_ms'] for beat in features_list[-3:] if beat['Intervalle_RR_ms'] > 0]
+        recent_rrs = [
+            beat['Intervalle_RR_ms'] 
+            for beat in features_list[-3:] 
+            if pd.notna(beat['Intervalle_RR_ms']) and beat['Intervalle_RR_ms'] > 0
+        ]
+
         if len(recent_rrs) >= 2:
             mean_rr = np.mean(recent_rrs)
             f['Premature_beat'] = int(f['Intervalle_RR_ms'] < 0.8 * mean_rr)
@@ -306,16 +295,6 @@ def extract_features_per_qrs(signal ,mask, fs=250):
 
 
         #  Rhythm Features
-        # Heart rate
-        f['Heart_rate_bpm'] = 60000 / f['Intervalle_RR_ms'] if f['Intervalle_RR_ms'] > 0 else 0
-
-        # Rhythm Features
-        recent_rrs = [beat['Intervalle_RR_ms'] for beat in features_list[-3:] if beat['Intervalle_RR_ms'] > 0]
-        if len(recent_rrs) >= 2:
-            mean_rr = np.mean(recent_rrs)
-            f['Premature_beat'] = int(f['Intervalle_RR_ms'] < 0.8 * mean_rr)
-        else:
-            f['Premature_beat'] = 0
 
         # Local rhythm variability (SDNN)
         f['Local_RR_variability'] = np.std(recent_rrs) if len(recent_rrs) > 1 else 0
@@ -328,7 +307,11 @@ def extract_features_per_qrs(signal ,mask, fs=250):
             f['Local_RMSSD'] = 0
 
         # Bigeminy / Trigeminy pattern
-        all_rrs = [beat['Intervalle_RR_ms'] for beat in features_list[-5:] if beat['Intervalle_RR_ms'] > 0]
+        all_rrs = [
+            beat['Intervalle_RR_ms']
+            for beat in features_list[-5:]
+            if pd.notna(beat['Intervalle_RR_ms']) and beat['Intervalle_RR_ms'] > 0
+        ]
         if len(all_rrs) >= 4:
             pattern = (np.array(all_rrs) < 0.9 * np.mean(all_rrs)).astype(int)
             pattern_str = ''.join(map(str, pattern))
@@ -341,4 +324,7 @@ def extract_features_per_qrs(signal ,mask, fs=250):
 
         features_list.append(f)
 
+
     return features_list
+
+

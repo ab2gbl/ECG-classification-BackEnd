@@ -6,7 +6,8 @@ import numpy as np
 import joblib
 import os
 import pandas as pd
-
+import mlflow
+import globals_vars
 class_map = {
      0 : 'N',
      1 : 'L',
@@ -17,6 +18,24 @@ class_map = {
 }
 
 class BeatClassifierAgent(Agent):
+    def __init__(self, jid, password):
+        super().__init__(jid, password)
+        self.Beat_classifier_model = None
+        self.Beat_classifier_model_run_id =  globals_vars.get_beat_classification()
+
+    async def setup(self):
+        print(f"[{self.jid}] BeatClassifierAgent started.")
+        try:
+            self.Beat_classifier_model = mlflow.sklearn.load_model(f"runs:/{self.Beat_classifier_model_run_id}/model")
+            
+            print("[BeatClassifierAgent] Model loaded successfully ✅")
+
+        except Exception as e:
+            print(f"[BeatClassifierAgent] Error loading model: {str(e)}")
+            raise
+
+        self.add_behaviour(self.ClassifyBeat())
+
     class ClassifyBeat(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=1)
@@ -36,8 +55,8 @@ class BeatClassifierAgent(Agent):
                         print("[BeatClassifierAgent] ℹ️ No beats detected, sending empty response")
                         return
 
-                    model_path = os.path.join(os.path.dirname(__file__), "models", "ecg_multi_class_model.pkl")
-                    model = joblib.load(model_path)
+                    # model_path = os.path.join(os.path.dirname(__file__), "models", "ecg_multi_class_model.pkl")
+                    # model = joblib.load(model_path)
                     print("[BeatClassifierAgent] Features received:")
                     
                     # Create DataFrame and exclude beat_number from prediction
@@ -49,7 +68,7 @@ class BeatClassifierAgent(Agent):
                     if 'R_index' in df.columns:
                         df = df[['R_index'] + [col for col in df.columns if col != 'R_index']]
                     
-                    y_pred = model.predict(df)
+                    y_pred = self.agent.Beat_classifier_model.predict(df)
 
                     # Add predictions to each dictionary in the original list
                     for i, feature_dict in enumerate(features):
@@ -63,7 +82,7 @@ class BeatClassifierAgent(Agent):
                     })
                     await self.send(response)
                     print("[BeatClassifierAgent] ✅ Sent processed ECG back to controller")
-                    model = None
+                    
                 except Exception as e:
                     print(f"[BeatClassifierAgent] ❌ Error processing beats: {str(e)}")
                     response = Message(to="controller@localhost")
@@ -74,6 +93,3 @@ class BeatClassifierAgent(Agent):
                     })
                     await self.send(response)
 
-    async def setup(self):
-        print(f"[{self.jid}] BeatClassifierAgent started.")
-        self.add_behaviour(self.ClassifyBeat())

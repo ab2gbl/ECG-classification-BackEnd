@@ -53,9 +53,10 @@ pip install -r requirements.txt # --no-deps
 
 - models links:
   - [TCN](https://drive.google.com/file/d/1HpYazmdleuyBTERfswcsJzbq7Vgp4MCS/view?usp=sharing)
-  - [UNet](https://drive.google.com/file/d/1OgGjSDh-HdKuyGcOYPCUztTXu9U6Ld-p/view?usp=sharing)
-  - [R detection](https://www.kaggle.com/models/abdessamiguebli/r-detection)
-  - [Classification](https://www.kaggle.com/code/abdessamiguebli/ecg-classification/output)
+  - [UNet](https://www.kaggle.com/models/abdessamiguebli/unet-model-for-ecg-mask-detection/pyTorch/default)
+  - [R detection (version 2)](https://www.kaggle.com/models/abdessamiguebli/r-detection)
+  - [Beat Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-beat-classification-model)
+  - [Signal Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-signal-classification)
 
 5. **Register models to ML-Flow**
 
@@ -85,4 +86,17 @@ mlflow server --host 127.0.0.1 --port 8080
 
 ```bash
 python manage.py runserver
+```
+
+# full space error:
+
+its because of full cache space , clean it using
+
+```bash
+sudo rm -rf /tmp/*
+```
+
+```bash
+export TMPDIR="/media/kali/D/tmp"
+mkdir -p "$TMPDIR"
 ```

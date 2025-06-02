@@ -41,10 +41,10 @@ class BeatFeatures(models.Model):
     end = models.IntegerField()
     qrs_start = models.IntegerField()
     qrs_end = models.IntegerField()
-    p_start = models.IntegerField()
-    p_end = models.IntegerField()
-    t_start = models.IntegerField()
-    t_end = models.IntegerField()
+    p_start = models.IntegerField(null=True, blank=True)
+    p_end = models.IntegerField(null=True, blank=True)
+    t_start = models.IntegerField(null=True, blank=True)
+    t_end = models.IntegerField(null=True, blank=True)
     
     # Durations
     duree_p_ms = models.FloatField()
@@ -59,7 +59,7 @@ class BeatFeatures(models.Model):
     amplitude_p = models.FloatField()
     r_index = models.IntegerField()
     amplitude_r = models.FloatField()
-    intervalle_rr_ms = models.FloatField()
+    intervalle_rr_ms = models.FloatField(null=True, blank=True)
     q_index = models.IntegerField()
     amplitude_q = models.FloatField()
     s_index = models.IntegerField()
@@ -80,7 +80,7 @@ class BeatFeatures(models.Model):
     # Additional features
     t_inversion = models.IntegerField()
     qrs_axis_estimate = models.FloatField()
-    heart_rate_bpm = models.FloatField()
+    heart_rate_bpm = models.FloatField(null=True, blank=True)
     premature_beat = models.IntegerField()
     local_rr_variability = models.FloatField()
     local_rmssd = models.FloatField()

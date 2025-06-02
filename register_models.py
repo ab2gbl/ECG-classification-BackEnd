@@ -1,9 +1,16 @@
-# run_files.py
-
 import subprocess
 
-# Run file1.py
-subprocess.run(["python", "acquisition/agents/ml_flow/TCN_register.py"])
-
-# Run file2.py
+print("Registering models...")
 subprocess.run(["python", "acquisition/agents/ml_flow/UNet_register.py"])
+print("UNet model registered successfully.")
+subprocess.run(["python", "acquisition/agents/ml_flow/TCN_register.py"])
+print("TCN model registered successfully.")
+subprocess.run(["python", "acquisition/agents/ml_flow/R_detection_register.py"])
+print("R_detection model registered successfully.")
+subprocess.run(["python", "acquisition/agents/ml_flow/beat_classification_register.py"])
+print("Beat_classifier model registered successfully.")
+subprocess.run(["python", "acquisition/agents/ml_flow/signal_normality_model_register.py"])
+print("Signal_normality model registered successfully.")
+subprocess.run(["python", "acquisition/agents/ml_flow/signal_SB_model_register.py"])
+print("Signal_SB model registered successfully.")
+print("All models registered successfully.")

@@ -1,13 +1,8 @@
 import numpy as np
 from scipy.signal import find_peaks
 from tqdm import tqdm
+
 def remove_uncomplete_first_last_wave(predicted):
-    """
-    Merge or remove close-together same-class segments if separated only by background.
-    :param predicted: 1D numpy array of predicted class labels (0=background, 1=P, 2=QRS, 3=T)
-    :param target_class: 1 for P, 3 for T
-    :return: modified predicted array
-    """
     start = predicted[0]
     end = predicted[-1]
     if start != 0:
@@ -29,38 +24,26 @@ def merge_close_waves(predicted, max_gap=10):
     indices = np.where(predicted == target_class)[0]
 
     if len(indices) < 2:
-        return predicted  # Nothing to merge
+        return predicted  
 
     for i in range(len(indices) - 1):
         current = indices[i]
         next_ = indices[i + 1]
-        #print(next_-current-1)
         if 0 < next_ - current - 1 < max_gap:
-            # Fill the gap between current and next with 1s
             predicted[current:next_ + 1] = target_class
 
   return predicted
 
-
 def remove_irrelevant_waves(predicted,start_search=2,end_search=5):
-    """
-    Remove waves before the first P and after the last T that are not relevant.
-    :param predicted: 1D numpy array of predicted class labels (0=background, 1=P, 2=QRS, 3=T)
-    :return: modified predicted array
-    """
-    # print(predicted)
-
     start=0
-    # Step 1: Find the first P that has a QRS after it
+    # Find the first P that has a QRS after it
     if 1 in predicted[:start_search*250] :
-      # print("found p in first 2s")
-
       for i in range(len(predicted)-1):
           start = i
 
           if predicted[i] == 1:
               start = i
-              # skip 1
+              
               while i < len(predicted)-1 and predicted[i] == 1:
                 i += 1
               # if it's not 0 or 2 break
@@ -75,50 +58,37 @@ def remove_irrelevant_waves(predicted,start_search=2,end_search=5):
                 continue
               else:
                 break
-      #print("start:",start)
       predicted[:start] = 0
 
 
-    # step 2 : remove after last T
+    # remove after last T
     if 3 in predicted[-end_search*250:]:
-      # print("found t in last 5s")
-
+      
       end = predicted[-1]
       for i in range((len(predicted) - 1), -1, -1):
           end = i
 
           if predicted[i] == 3:
               end = i
-              # skip 1
               while i > 0 and predicted[i] == 3:
                 i -= 1
               # if it's not 0 or 2 break
               if predicted[i] == 1:
-                #print("found 1")
                 continue
               # skip background if it exist
               if predicted[i] == 0:
                 while i > 0 and predicted[i] == 0:
                   i -= 1
-              # if it's not qrs continue to next p
+              # if it's not qrs continue to next t
               if predicted[i] != 2:
                 continue
               else:
                 break
-      #print("end:",end)
       predicted[end+1:] = 0
+
     return (predicted)
 
-# Now, i is the index of the first value that is NOT 1 after the P wave segment
-
-
 def check_repeated_waves(predicted):
-    """
-    Merge or remove close-together same-class segments if separated only by background.
-    :param predicted: 1D numpy array of predicted class labels (0=background, 1=P, 2=QRS, 3=T)
-    :param target_class: 1 for P, 3 for T
-    :return: modified predicted array
-    """
     cleaned = predicted.copy()
     for target_class in [1,2,3]:
       segments = []
@@ -162,7 +132,6 @@ def check_repeated_waves(predicted):
     return cleaned
 
 
-from scipy.signal import find_peaks
 
 
 def fix_before_P(signal,mask,p_start,p_end,slope_threshold=0.02):
@@ -227,7 +196,7 @@ def fix_P(signal, mask):
           mask, p_start = fix_before_P(signal, mask,p_start,p_end)
           j=0
           #print(p_end)
-          while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and p_end + 1 < len(mask) and mask[p_end + 1] == 0:
+          while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and mask[p_end + 1] == 0:
             j += 1
             p_end += 1
             mask[p_end] = 1
@@ -298,7 +267,7 @@ def fix_P(signal, mask):
             if peak == "after":
                 mask, p_start = fix_before_P(signal, mask,p_start,p_end)
                 j=0
-                while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and p_end + 1 < len(mask) and mask[p_end + 1] == 0:
+                while (p_end + 1 < len(signal)) and signal[p_end] > signal[p_start] and mask[p_end + 1] == 0:
                   j += 1
                   p_end += 1
                   mask[p_end] = 1
@@ -321,13 +290,6 @@ def fix_P(signal, mask):
     return mask
 
 
-import numpy as np
-from scipy.signal import find_peaks
-
-
-
-import numpy as np
-from scipy.signal import find_peaks
 
 def fast_fix_QRS(signal, mask, fs=250):
     # time = np.arange(len(signal)) / fs
@@ -454,4 +416,3 @@ def fast_fix_QRS(signal, mask, fs=250):
             
         
     return mask
-

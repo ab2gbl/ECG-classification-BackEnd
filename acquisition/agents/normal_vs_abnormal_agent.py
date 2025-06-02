@@ -5,6 +5,8 @@ import pandas as pd
 from collections import Counter
 import json
 import joblib , os
+import mlflow.sklearn
+import globals_vars
 def flatten_feature_dict(d, keep_sums_for=None, keep_means_for=None):
     if keep_sums_for is None:
         keep_sums_for = {'T_inversion', 'Premature_beat', 'Bigeminy', 'Trigeminy'}
@@ -30,6 +32,7 @@ def flatten_feature_dict(d, keep_sums_for=None, keep_means_for=None):
             if not pd.isna(v):
                 flat[k] = v
     return flat
+
 
 def standardize_feature_keys(features):
     """Standardize feature keys by converting to lowercase and fixing ratio names."""
@@ -104,13 +107,29 @@ def extract_signal_features(df_signal):
         **derived_features
     }
 
-    # First flatten the features
-    flattened_features = flatten_feature_dict(signal_features)
     
     # Then standardize the keys
-    return flattened_features
+    return flatten_feature_dict(signal_features)
 
 class NormalVsAbnormalAgent(Agent):
+    def __init__(self, jid, password):
+        super().__init__(jid, password)
+        self.model = None
+        self.model_run_id =  globals_vars.get_signal_normality_model()
+
+
+    async def setup(self):
+        print(f"[{self.jid}] NormalVsAbnormalAgent ready.")
+        try:
+            self.model = mlflow.sklearn.load_model(f"runs:/{self.model_run_id}/model")
+            
+            print("[NormalVsAbnormalAgent] Model loaded successfully ✅")
+
+        except Exception as e:
+            print(f"[NormalVsAbnormalAgent] Error loading model: {str(e)}")
+            raise
+
+        self.add_behaviour(self.ClassifySignal()) 
     class ClassifySignal(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=1)
@@ -124,12 +143,9 @@ class NormalVsAbnormalAgent(Agent):
                     beat_features = pd.DataFrame(beat_features)
                     signal_features = extract_signal_features(beat_features)
                     
-                    # Load the model for normal vs abnormal classification
-                    model_path = os.path.join(os.path.dirname(__file__), "models", "normal_vs_abnormal_model.pkl")
-                    model = joblib.load(model_path)
                     
                     df = pd.DataFrame([signal_features])
-                    y_pred = model.predict(df)
+                    y_pred = self.agent.model.predict(df)
                     y_pred = y_pred[0]
                     
                     # Classify as Normal (0) or Abnormal (1)
@@ -150,7 +166,3 @@ class NormalVsAbnormalAgent(Agent):
                     print("[NormalVsAbnormalAgent] ✅ Sent classified features to controller")
                 except Exception as e:
                     print(f"[NormalVsAbnormalAgent] ❌ Error processing features: {e}")
-
-    async def setup(self):
-        print(f"[{self.jid}] NormalVsAbnormalAgent ready.")
-        self.add_behaviour(self.ClassifySignal()) 

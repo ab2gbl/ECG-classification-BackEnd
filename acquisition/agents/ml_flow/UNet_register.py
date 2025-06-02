@@ -13,10 +13,10 @@ sys.path.append(parent_dir)
 import globals_vars 
 mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
 
-
+print("loading UNet model...")
 device = torch.device("cuda" if torch.cuda.is_available(    ) else "cpu")
 
-model_path = 'acquisition/agents/models/unet1d_ecg_qrs_v2.pth'
+model_path = 'acquisition/agents/models/unet1d_ecg_qrs.pth'
 model = UNet1D_Enhanced(n_classes=4).to(device)
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()

@@ -6,7 +6,8 @@ from collections import Counter
 import json
 import joblib
 import os
-
+import mlflow
+import globals_vars
 def flatten_feature_dict(d, keep_sums_for=None, keep_means_for=None):
     if keep_sums_for is None:
         keep_sums_for = {'T_inversion', 'Premature_beat', 'Bigeminy', 'Trigeminy'}
@@ -32,6 +33,7 @@ def flatten_feature_dict(d, keep_sums_for=None, keep_means_for=None):
             if not pd.isna(v):
                 flat[k] = v
     return flat
+
 
 def standardize_feature_keys(features):
     """Standardize feature keys by converting to lowercase and fixing ratio names."""
@@ -113,6 +115,25 @@ def extract_signal_features(df_signal):
     return flattened_features
 
 class SinusBradycardiaClassifierAgent(Agent):
+    def __init__(self, jid, password):
+        super().__init__(jid, password)
+        self.model = None
+        self.model_run_id =  globals_vars.get_signal_SB_model()
+
+
+    async def setup(self):
+        print(f"[{self.jid}] SinusBradycardiaClassifierAgent ready.")
+        try:
+            self.model = mlflow.sklearn.load_model(f"runs:/{self.model_run_id}/model")
+            
+            print("[SinusBradycardiaClassifierAgent] Model loaded successfully ✅")
+
+        except Exception as e:
+            print(f"[SinusBradycardiaClassifierAgent] Error loading model: {str(e)}")
+            raise
+
+
+        self.add_behaviour(self.ClassifySignal()) 
     class ClassifySignal(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=1)
@@ -152,7 +173,3 @@ class SinusBradycardiaClassifierAgent(Agent):
                     print("[SinusBradycardiaClassifierAgent] ✅ Sent classified features to controller")
                 except Exception as e:
                     print(f"[SinusBradycardiaClassifierAgent] ❌ Error processing features: {e}")
-
-    async def setup(self):
-        print(f"[{self.jid}] SinusBradycardiaClassifierAgent ready.")
-        self.add_behaviour(self.ClassifySignal()) 

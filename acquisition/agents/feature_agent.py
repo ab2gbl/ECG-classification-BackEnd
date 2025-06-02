@@ -5,6 +5,7 @@ from .feature_functions import *
 import asyncio
 import numpy as np
 import json
+import math
 def convert_numpy(obj):
     if isinstance(obj, dict):
         return {k: convert_numpy(v) for k, v in obj.items()}
@@ -12,7 +13,9 @@ def convert_numpy(obj):
         return [convert_numpy(x) for x in obj]
     elif isinstance(obj, (np.integer, np.int64, np.int32)):
         return int(obj)
-    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+    elif isinstance(obj, (np.floating, np.float64, np.float32,float)):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
         return float(obj)
     else:
         return obj
