@@ -117,16 +117,27 @@ def extract_signal_features(df_signal):
 class SinusBradycardiaClassifierAgent(Agent):
     def __init__(self, jid, password):
         super().__init__(jid, password)
-        self.model = None
-        self.model_run_id =  globals_vars.get_signal_SB_model()
+        self.SB_model = None
+        self.SB_model_run_id =  globals_vars.get_signal_SB_model()
+        self.supraventricular_tachycardia_model = None
+        self.supraventricular_tachycardia_model_run_id = globals_vars.get_signal_supraventricular_tachycardia_model()
+        self.sinus_arrhythmia_model = None
+        self.sinus_arrhythmia_model_run_id = globals_vars.get_signal_sinus_arrhythmia_model()
+        self.signal_sinus_tachycardia_model = None
+        self.signal_sinus_tachycardia_model_run_id = globals_vars.get_signal_sinus_tachycardia_model()
 
 
     async def setup(self):
         print(f"[{self.jid}] SinusBradycardiaClassifierAgent ready.")
         try:
-            self.model = mlflow.sklearn.load_model(f"runs:/{self.model_run_id}/model")
-            
+            self.SB_model = mlflow.sklearn.load_model(f"runs:/{self.SB_model_run_id}/model")
             print("[SinusBradycardiaClassifierAgent] Model loaded successfully ✅")
+            self.supraventricular_tachycardia_model = mlflow.sklearn.load_model(f"runs:/{self.supraventricular_tachycardia_model_run_id}/model")
+            print("[SinusBradycardiaClassifierAgent] Supraventricular tachycardia model loaded successfully ✅")
+            self.sinus_arrhythmia_model = mlflow.sklearn.load_model(f"runs:/{self.sinus_arrhythmia_model_run_id}/model")
+            print("[SinusBradycardiaClassifierAgent] Sinus arrhythmia model loaded successfully ✅")
+            self.signal_sinus_tachycardia_model = mlflow.sklearn.load_model(f"runs:/{self.signal_sinus_tachycardia_model_run_id}/model")
+            print("[SinusBradycardiaClassifierAgent] Sinus tachycardia model loaded successfully ✅")
 
         except Exception as e:
             print(f"[SinusBradycardiaClassifierAgent] Error loading model: {str(e)}")
@@ -146,21 +157,47 @@ class SinusBradycardiaClassifierAgent(Agent):
                     
                     beat_features = pd.DataFrame(beat_features)
                     signal_features = extract_signal_features(beat_features)
+
+
                     
-                    # Load the model for sinus bradycardia classification
-                    model_path = os.path.join(os.path.dirname(__file__), "models", "sb_vs_else_model.pkl")
-                    model = joblib.load(model_path)
-                    
+                    # Sinus bradycardia classification
                     df = pd.DataFrame([signal_features])
-                    y_pred = model.predict(df)
+                    y_pred = self.agent.SB_model.predict(df)
                     y_pred = y_pred[0]
-                    
-                    # Classify as Sinus bradycardia (0) or other abnormal (1)
+                    signal_type = "Abnormal: "
                     if y_pred == 0:
-                        signal_type = "Abnormal: Sinus bradycardia"
+                        signal_type += "Sinus bradycardia, "
                     else:
-                        signal_type = "Abnormal: Not Sinus bradycardia"
+                        signal_type += "No Sinus bradycardia, "
                     
+                    # Sinus arrhythmia classification
+                    y_pred = self.agent.sinus_arrhythmia_model.predict(df)
+                    y_pred = y_pred[0]
+                    if y_pred == 0:
+                        signal_type += "Sinus arrhythmia, "
+                    else:
+                        signal_type += "No Sinus arrhythmia, "
+
+                    # Supraventricular tachycardia classification
+                    y_pred = self.agent.supraventricular_tachycardia_model.predict(df)
+                    y_pred = y_pred[0]
+                    if y_pred == 0:
+                        signal_type += "Supraventricular tachycardia, "
+                    else:
+                        signal_type += "No Supraventricular tachycardia, "
+
+                    # Sinus tachycardia classification
+                    y_pred = self.agent.signal_sinus_tachycardia_model.predict(df)
+                    y_pred = y_pred[0]
+                    if y_pred == 0:
+                        signal_type += "Sinus tachycardia."
+                    else:
+                        signal_type += "No Sinus tachycardia." 
+                    
+
+
+
+
                     signal_features = standardize_feature_keys(signal_features)
                     
                     # Send response to controller

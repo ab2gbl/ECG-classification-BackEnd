@@ -20,6 +20,7 @@ class ControllerAgent(Agent):
         self.result_ready = Event()
         self.mask = None
         self.features = None
+        self.timeout = 240  # seconds
     def reset_result(self):
         self.final_result = {}
         self.normalized_signal = None
@@ -111,7 +112,7 @@ class ControllerAgent(Agent):
 
                 # Wait for response
                 response = None
-                timeout = 60  # seconds
+                timeout = self.agent.timeout  # seconds
                 interval = 0.5  # polling interval
                 elapsed = 0
 
@@ -148,7 +149,7 @@ class ControllerAgent(Agent):
                 print("[ControllerAgent] 📨 Sent data to PostDetectionAgent")
 
                 # Wait for responseresponse = None
-                timeout = 30  # seconds
+                timeout = self.agent.timeout
                 interval = 0.5  # polling interval
                 elapsed = 0
 
@@ -273,7 +274,7 @@ class ControllerAgent(Agent):
 
                 # Wait for response
                 response = None
-                timeout = 30  # seconds
+                timeout = self.agent.timeout
                 interval = 0.5  # polling interval
                 elapsed = 0
 
@@ -304,7 +305,7 @@ class ControllerAgent(Agent):
 
                     # Wait for response
                     response = None
-                    timeout = 30  # seconds
+                    timeout = self.agent.timeout
                     interval = 0.5  # polling interval
                     elapsed = 0
 
@@ -340,7 +341,7 @@ class ControllerAgent(Agent):
                 await self.send(msg)
                 # Wait for response
                 response = None
-                timeout = 30  # seconds
+                timeout = self.agent.timeout
                 interval = 0.5  # polling interval
                 elapsed = 0
 

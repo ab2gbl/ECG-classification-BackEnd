@@ -48,3 +48,21 @@ def get_signal_SB_model():
 def set_signal_SB_model(value):
     config['Signal_SB_model_run_id'] = value
     save_config(config)
+# Signal sinus_arrhythmia model
+def get_signal_sinus_arrhythmia_model():
+    return config['Signal_sinus_arrhythmia_model_run_id']
+def set_signal_sinus_arrhythmia_model(value):
+    config['Signal_sinus_arrhythmia_model_run_id'] = value
+    save_config(config)
+# Signal supraventricular_tachycardia model
+def get_signal_supraventricular_tachycardia_model():
+    return config['Signal_supraventricular_tachycardia_model_run_id']
+def set_signal_supraventricular_tachycardia_model(value):
+    config['Signal_supraventricular_tachycardia_model_run_id'] = value
+    save_config(config)
+# Signal sinus_tachycardia model
+def get_signal_sinus_tachycardia_model():
+    return config['Signal_sinus_tachycardia_model_run_id']
+def set_signal_sinus_tachycardia_model(value):
+    config['Signal_sinus_tachycardia_model_run_id'] = value
+    save_config(config)
