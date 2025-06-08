@@ -26,20 +26,29 @@ class FeatureAgent(Agent):
             msg = await self.receive(timeout=1)
             if msg:
                 print("[FeatureAgent] Got segmentation")
-                # Extract features
-                data = json.loads(msg.body)
-                signal = np.array(data["signal"]) 
-                pred_labels = np.array(data["mask"]) 
-                
-                print(f"[FeatureAgent] Got signal {signal.shape} and mask {pred_labels.shape}")
-                features_per_beat = extract_features_per_qrs(signal, pred_labels)
-                print(f"[FeatureAgent] Extracted features: {len(features_per_beat)}")
-                # Convert numpy arrays to lists for JSON serialization
-                features_per_beat = convert_numpy(features_per_beat)
+                try:
+                    # Extract features
+                    data = json.loads(msg.body)
+                    signal = np.array(data["signal"]) 
+                    pred_labels = np.array(data["mask"]) 
+                    
+                    print(f"[FeatureAgent] Got signal {signal.shape} and mask {pred_labels.shape}")
+                    features_per_beat = extract_features_per_qrs(signal, pred_labels)
+                    print(f"[FeatureAgent] Extracted features: {len(features_per_beat)}")
+                    # Convert numpy arrays to lists for JSON serialization
+                    features_per_beat = convert_numpy(features_per_beat)
+                    status = "success"
+                except:
+                    print("[FeatureAgent] ℹ️ error FeatureAgent")
+                    features_per_beat = []
+                    status = "error"
+
+
 
                 response = Message(to="controller@localhost")
                 response.body = json.dumps({
-                    "features": features_per_beat # Your processed signal
+                    "features": features_per_beat, # Your processed signal
+                    "status": status
                 })
                 await self.send(response)
                 print("[FeatureAgent] ✅ Sent processed ECG back to controller")

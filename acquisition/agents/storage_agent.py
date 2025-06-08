@@ -17,10 +17,15 @@ class StorageAgent(Agent):
                     data = json.loads(msg.body)
                     await self.agent.save_to_db(data)
                     print("[StorageAgent] ✅ Data saved")
-                    Message(to="controller@localhost").body = "Data saved"
-                    await self.send(Message(to="controller@localhost"))
+                    status = "Data saved"
+                
                 except Exception as e:
                     print(f"[StorageAgent] ❌ Error saving data: {e}")
+                    status = "error"
+
+                response =  Message(to="controller@localhost")
+                response.body = status
+                await self.send(response)
             
 
     async def setup(self):

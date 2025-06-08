@@ -41,54 +41,60 @@ class AcquisitionAgent(Agent):
             msg = await self.receive(timeout=1)
             if msg:
                 print("[AcquisitionAgent] 📥 Received ECG data from controller")
-                data = json.loads(msg.body)
-                dat_bytes = base64.b64decode(data["dat_file"])
-                hea_bytes = base64.b64decode(data["hea_file"])
-                with tempfile.TemporaryDirectory() as tmpdirname:
-                    first_line = hea_bytes.decode().splitlines()[0]  # ✅ no .read()
-                    true_base_name = first_line.split()[0]
-                    base_path = os.path.join(tmpdirname, true_base_name)
-                    with open(base_path + ".dat", "wb") as f:
-                        f.write(dat_bytes)
-                    with open(base_path + ".hea", "wb") as f:
-                        f.write(hea_bytes)
-                                            
-                    try:
-                        # Try to read all 15 channels (requires .xyz file to exist)
-                        record = wfdb.rdrecord(base_path)
-                    except FileNotFoundError:
-                        # If .xyz file is missing, fall back to first 12 channels (standard ECG)
-                        record = wfdb.rdrecord(base_path, channels=list(range(12)))
-                    
+                try:
+                    data = json.loads(msg.body)
+                    dat_bytes = base64.b64decode(data["dat_file"])
+                    hea_bytes = base64.b64decode(data["hea_file"])
+                    with tempfile.TemporaryDirectory() as tmpdirname:
+                        first_line = hea_bytes.decode().splitlines()[0]  # ✅ no .read()
+                        true_base_name = first_line.split()[0]
+                        base_path = os.path.join(tmpdirname, true_base_name)
+                        with open(base_path + ".dat", "wb") as f:
+                            f.write(dat_bytes)
+                        with open(base_path + ".hea", "wb") as f:
+                            f.write(hea_bytes)
+                                                
+                        try:
+                            # Try to read all 15 channels (requires .xyz file to exist)
+                            record = wfdb.rdrecord(base_path)
+                        except FileNotFoundError:
+                            # If .xyz file is missing, fall back to first 12 channels (standard ECG)
+                            record = wfdb.rdrecord(base_path, channels=list(range(12)))
+                        
 
-                  # Get the signal (ECG data)
-                    signal = record.p_signal[:, 0]  # lead I
-                    fs = record.fs
-                    start = data['signal_start'] if 'signal_start' in data else 0
-                    end = data['signal_end'] if 'signal_end' in data else len(signal)/fs
-                    if end > len(signal)/fs:
-                        end = len(signal)/fs
-                    ecg_signal=signal[int(start*fs):int(end*fs)]
-                    
-                    
+                    # Get the signal (ECG data)
+                        signal = record.p_signal[:, 0]  # lead I
+                        fs = record.fs
+                        start = data['signal_start'] if 'signal_start' in data else 0
+                        end = data['signal_end'] if 'signal_end' in data else len(signal)/fs
+                        if end > len(signal)/fs:
+                            end = len(signal)/fs
+                        ecg_signal=signal[int(start*fs):int(end*fs)]
+                        
+                        
 
-                    filtered_signal = bandpass_filter(ecg_signal,fs=fs)
-                    smoothed_signal = smooth_signal(filtered_signal)
-                    normalized_signal = normalize_signal(smoothed_signal)
-                    if fs != 250:
-                        normalized_signal = resample_signal(normalized_signal, original_fs=fs, target_fs=250)
-                        fs = 250
-                    
+                        filtered_signal = bandpass_filter(ecg_signal,fs=fs)
+                        smoothed_signal = smooth_signal(filtered_signal)
+                        normalized_signal = normalize_signal(smoothed_signal)
+                        if fs != 250:
+                            normalized_signal = resample_signal(normalized_signal, original_fs=fs, target_fs=250)
+                            fs = 250
+                    status = "success"
+                except:      
+                    print("[AcquisitionAgent] 🚨 Error processing ECG data")
+                    status = "error"
+                    normalized_signal = np.zeros(240)
 
                     # Send result back to controller
-                    response = msg.make_reply()  
-                    response.set_metadata("performative", "inform")
-                    response.set_metadata("content_type", "application/json")
-                    response.body = json.dumps({
-                        "normalized_signal": normalized_signal.tolist()  
-                    })
-                    await self.send(response)
-                    print("[AcquisitionAgent] ✅ Sent processed ECG back to controller")
+                response = msg.make_reply()  
+                response.set_metadata("performative", "inform")
+                response.set_metadata("content_type", "application/json")
+                response.body = json.dumps({
+                    "normalized_signal": normalized_signal.tolist() ,
+                    "status": status 
+                })
+                await self.send(response)
+                print("[AcquisitionAgent] ✅ Sent processed ECG back to controller")
             
             
 

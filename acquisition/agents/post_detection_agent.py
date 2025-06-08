@@ -12,26 +12,33 @@ class PostDetectionAgent(Agent):
             msg = await self.receive(timeout=1)
             if msg:
                 print("[PostDetectionAgent] Got segmentation:")
-                data = json.loads(msg.body)
-                signal = np.array(data["signal"]) 
-                pred_labels = np.array(data["mask"]) 
-                
+                try:
+                    data = json.loads(msg.body)
+                    signal = np.array(data["signal"]) 
+                    pred_labels = np.array(data["mask"]) 
+                    
 
-                pred_labels = remove_uncomplete_first_last_wave(pred_labels)
-                pred_labels = merge_close_waves(pred_labels)
-                pred_labels = remove_irrelevant_waves(pred_labels)
-                pred_labels = check_repeated_waves(pred_labels)
+                    pred_labels = remove_uncomplete_first_last_wave(pred_labels)
+                    pred_labels = merge_close_waves(pred_labels)
+                    pred_labels = remove_irrelevant_waves(pred_labels)
+                    pred_labels = check_repeated_waves(pred_labels)
 
 
-                pred_labels = fix_P(signal,pred_labels)
-                pred_labels = fast_fix_QRS(signal,mask=pred_labels,fs=250)
-                pred_labels = merge_close_waves(pred_labels)
+                    pred_labels = fix_P(signal,pred_labels)
+                    pred_labels = fast_fix_QRS(signal,mask=pred_labels,fs=250)
+                    pred_labels = merge_close_waves(pred_labels)
+                    pred_labels = pred_labels.tolist()
+                    status = "success"
+                except: 
+                    print("[PostDetectionAgent] ℹ️ error PostDetectionAgent")
+                    pred_labels = [0] * len(signal)
+                    status = "error"
 
                 # Extract features
-                features = "HR: 72 bpm, PR: 120ms"
                 response = Message(to="controller@localhost")
                 response.body = json.dumps({
-                    "full_prediction": pred_labels.tolist() # Your processed signal
+                    "full_prediction": pred_labels, # Your processed signal
+                    "status": status
                 })
                 await self.send(response)
                 print("[PostDetectionAgent] ✅ Sent processed ECG back to controller")

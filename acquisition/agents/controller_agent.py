@@ -78,6 +78,17 @@ class ControllerAgent(Agent):
                     elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from AcquisitionAgent")
+                    response_data = json.loads(response.body)
+
+                    if response_data.get("status") == "error":
+                        print("[ControllerAgent] ℹ️ error reading signal")
+                        self.agent.final_result.update(json.loads(response.body))
+                        self.agent.final_result.update({
+                            "status": "error reading signal"
+                        })
+
+                        print("[ControllerAgent] Final result got")
+                        self.agent.result_ready.set()
                 else:
                     
                     print("[ControllerAgent] ❌ No response from AcquisitionAgent")
@@ -86,9 +97,9 @@ class ControllerAgent(Agent):
 
 
                 self.agent.final_result.update(json.loads(response.body))
-                if 1 not in steps:
-
+                if 1 not in steps or self.agent.final_result.get("status") == "error reading signal":
                     print("[ControllerAgent] Final result got")
+                    steps = [0]
                     self.agent.result_ready.set()  
                 else:
                     self.agent.normalized_signal = json.loads(response.body)["normalized_signal"]
@@ -124,11 +135,31 @@ class ControllerAgent(Agent):
 
                 if response:
                     print("[ControllerAgent] ✅ Received response from SegmentationAgent")
-                    self.agent.mask = json.loads(response.body)["full_prediction"]
                     
+                    response_data = json.loads(response.body)
+                    if response_data.get("status") == "error":
+                        print("[ControllerAgent] ℹ️ error from segmentation agent")
+                        self.agent.final_result.update(json.loads(response.body))
+                        self.agent.final_result.update({
+                            "status": "error from segmentation agent"
+                        })
+
+                        print("[ControllerAgent] Final result got")
+                        self.agent.result_ready.set()
+                        steps = [0]
+                        return
+                    
+                    self.agent.mask = json.loads(response.body)["full_prediction"]
                     # full_prediction
                 else:
                     print("[ControllerAgent] ❌ No response from SegmentationAgent")
+                    self.agent.final_result.update({
+                        "status": "error: no response from SegmentationAgent"
+                    })
+                    self.agent.result_ready.set()
+                    steps = [0]
+                    return
+
 
 
                 if 2 not in steps:
@@ -160,9 +191,27 @@ class ControllerAgent(Agent):
                     elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from PostDetectionAgent")
+                    response_data = json.loads(response.body)
+                    if response_data.get("status") == "error":
+                        print("[ControllerAgent] ℹ️ error from PostDetectionAgent")
+                        self.agent.final_result.update(json.loads(response.body))
+                        self.agent.final_result.update({
+                            "status": "error from PostDetection Agent"
+                        })
+
+                        print("[ControllerAgent] Final result got")
+                        self.agent.result_ready.set()
+                        steps = [0]
+                        return
+                    
                 else:
                     print("[ControllerAgent] ❌ No response from PostDetectionAgent")
-
+                    self.agent.final_result.update({
+                        "status": "error: no response from Post Detection Agent"
+                    })
+                    self.agent.result_ready.set()
+                    steps = [0]
+                    return
 
                 self.agent.mask = json.loads(response.body)["full_prediction"]
                 self.agent.final_result.update(json.loads(response.body))
@@ -195,8 +244,26 @@ class ControllerAgent(Agent):
                     elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from FeaturesAgent")
+                    response_data = json.loads(response.body)
+                    if response_data.get("status") == "error":
+                        print("[ControllerAgent] ℹ️ error from FeaturesAgent")
+                        self.agent.final_result.update(json.loads(response.body))
+                        self.agent.final_result.update({
+                            "status": "error from Features Agent"
+                        })
+
+                        print("[ControllerAgent] Final result got")
+                        self.agent.result_ready.set()
+                        steps = [0]
+                        return
                 else:
                     print("[ControllerAgent] ❌ No response from FeaturesAgent")
+                    self.agent.final_result.update({
+                        "status": "error: no response from Post Features Agent"
+                    })
+                    self.agent.result_ready.set()
+                    steps = [0]
+                    return
 
                 
                     
@@ -212,6 +279,7 @@ class ControllerAgent(Agent):
                             "status": "no_beats"
                         })
                         self.agent.result_ready.set()
+                        steps = [0]
                         return
 
                 if 4 not in steps:
@@ -254,6 +322,12 @@ class ControllerAgent(Agent):
                         self.agent.result_ready.set()
                 else:
                     print("[ControllerAgent] ❌ No response from BeatClassifierAgent")
+                    self.agent.final_result.update({
+                        "status": "error: no response from Post Beat Classifier Agent"
+                    })
+                    self.agent.result_ready.set()
+                    steps = [0]
+                    return
 
                 self.agent.final_result.update(json.loads(response.body))
                 if 5 not in steps:
@@ -285,8 +359,26 @@ class ControllerAgent(Agent):
                     elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from NormalVsAbnormalAgent")
+                    response_data = json.loads(response.body)
+                    if response_data.get("status") == "error":
+                        print("[ControllerAgent] ℹ️ error from NormalVsAbnormalAgent")
+                        self.agent.final_result.update(json.loads(response.body))
+                        self.agent.final_result.update({
+                            "status": "error from NormalVsAbnormal Agent"
+                        })
+
+                        print("[ControllerAgent] Final result got")
+                        self.agent.result_ready.set()
+                        steps = [0]
+                        return
                 else:
                     print("[ControllerAgent] ❌ No response from NormalVsAbnormalAgent")
+                    self.agent.final_result.update({
+                        "status": "error: no response from Post Normal Vs Abnormal Agent"
+                    })
+                    self.agent.result_ready.set()
+                    steps = [0]
+                    return
 
                 self.agent.final_result.update(json.loads(response.body))
                 
@@ -316,10 +408,28 @@ class ControllerAgent(Agent):
                         elapsed += interval
                     if response:
                         print("[ControllerAgent] ✅ Received response from SinusBradycardiaClassifierAgent")
+                        response_data = json.loads(response.body)
+                        if response_data.get("status") == "error":
+                            print("[ControllerAgent] ℹ️ error from SinusBradycardiaClassifierAgent")
+                            self.agent.final_result.update(json.loads(response.body))
+                            self.agent.final_result.update({
+                                "status": "error from SinusBradycardiaClassifier Agent"
+                            })
+
+                            print("[ControllerAgent] Final result got")
+                            self.agent.result_ready.set()
+                            steps = [0]
+                            return
                         # Update the signal type with the more specific classification
                         self.agent.final_result["signal_type"] = json.loads(response.body)["signal_type"]
                     else:
                         print("[ControllerAgent] ❌ No response from SinusBradycardiaClassifierAgent")
+                        self.agent.final_result.update({
+                            "status": "error: no response from Post Abnormal Classification Agent"
+                        })
+                        self.agent.result_ready.set()
+                        steps = [0]
+                        return
 
                 if 6 not in steps:
                     print("[ControllerAgent] Final result got")
@@ -352,6 +462,15 @@ class ControllerAgent(Agent):
                     elapsed += interval
                 if response:
                     print("[ControllerAgent] ✅ Received response from Storage agent")
+                    response_data = response.body
+                    print(response)
+
+                    if response_data == "error":
+                            print("[ControllerAgent] ℹ️ error from Storage Agent")
+                            self.agent.final_result.update({
+                                "status": "error saving in database"
+                            })
+                    
                 else:
                     print("[ControllerAgent] ❌ No response from Storage agent")
 

@@ -155,14 +155,19 @@ class NormalVsAbnormalAgent(Agent):
                         signal_type = "Abnormal"
                     
                     signal_features = standardize_feature_keys(signal_features)
-                    
+                    status = "success"
                     # Send response to controller
-                    response = Message(to="controller@localhost")
-                    response.body = json.dumps({
-                        "signal_features": signal_features,
-                        "signal_type": signal_type
-                    })
-                    await self.send(response)
-                    print("[NormalVsAbnormalAgent] ✅ Sent classified features to controller")
                 except Exception as e:
                     print(f"[NormalVsAbnormalAgent] ❌ Error processing features: {e}")
+                    signal_features = []
+                    signal_type = "error"
+                    status = "error"
+
+                response = Message(to="controller@localhost")
+                response.body = json.dumps({
+                    "signal_features": signal_features,
+                    "signal_type": signal_type,
+                    "status": status
+                })
+                await self.send(response)
+                print("[NormalVsAbnormalAgent] ✅ Sent classified features to controller")

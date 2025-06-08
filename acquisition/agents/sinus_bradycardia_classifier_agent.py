@@ -199,14 +199,21 @@ class SinusBradycardiaClassifierAgent(Agent):
 
 
                     signal_features = standardize_feature_keys(signal_features)
+                    status = "success"
                     
-                    # Send response to controller
-                    response = Message(to="controller@localhost")
-                    response.body = json.dumps({
-                        "signal_features": signal_features,
-                        "signal_type": signal_type
-                    })
-                    await self.send(response)
-                    print("[SinusBradycardiaClassifierAgent] ✅ Sent classified features to controller")
                 except Exception as e:
                     print(f"[SinusBradycardiaClassifierAgent] ❌ Error processing features: {e}")
+                    signal_features = []
+                    signal_type = "error"
+                    status = "error"
+
+                # Send response to controller
+                
+                response = Message(to="controller@localhost")
+                response.body = json.dumps({
+                    "signal_features": signal_features,
+                    "signal_type": signal_type,
+                    "status": status
+                })
+                await self.send(response)
+                print("[SinusBradycardiaClassifierAgent] ✅ Sent classified features to controller")

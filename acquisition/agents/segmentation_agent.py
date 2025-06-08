@@ -80,66 +80,71 @@ class SegmentationAgent(Agent):
             msg = await self.receive(timeout=1)  # Wait up to 10 seconds
             if msg:
                 print("[SegmentationAgent] Received ECG ✅")
-                data = json.loads(msg.body)
-                signal = np.array(data["signal"]) 
-                if data["model"] =="TCN":
-                    model = "TCN"
-                else:
-                    model = "UNet"
-                if model=="UNet":
-                    signal = signal.reshape(1, 1, -1)  # (1, 1, L)
-                    window_size = 240
-                    segments = []
-                    
-                    for i in range(0, signal.shape[2] - window_size + 1, window_size):
-                        window = signal[:, :, i:i+window_size]
-                        segments.append(window)
+                try:
+                    data = json.loads(msg.body)
+                    signal = np.array(data["signal"]) 
+                    if data["model"] =="TCN":
+                        model = "TCN"
+                    else:
+                        model = "UNet"
+                    if model=="UNet":
+                        signal = signal.reshape(1, 1, -1)  # (1, 1, L)
+                        window_size = 240
+                        segments = []
+                        
+                        for i in range(0, signal.shape[2] - window_size + 1, window_size):
+                            window = signal[:, :, i:i+window_size]
+                            segments.append(window)
 
-                    try:
-                        predictions = []
-                        print("Starting prediction")
-                        with torch.no_grad():
-                            for i in tqdm(range(len(segments)), desc="detection"):
-                                window = segments[i]
-                                window = torch.tensor(window, dtype=torch.float32).to(device)
-                                output = self.agent.UNet_model(window)  # Use the agent's model instance
-                                pred = torch.argmax(output, dim=1).cpu().numpy()[0]  # (L,)
-                                predictions.append(pred)
+                        try:
+                            predictions = []
+                            print("Starting prediction")
+                            with torch.no_grad():
+                                for i in tqdm(range(len(segments)), desc="detection"):
+                                    window = segments[i]
+                                    window = torch.tensor(window, dtype=torch.float32).to(device)
+                                    output = self.agent.UNet_model(window)  # Use the agent's model instance
+                                    pred = torch.argmax(output, dim=1).cpu().numpy()[0]  # (L,)
+                                    predictions.append(pred)
 
-                        full_prediction = np.concatenate(predictions).tolist() 
-                        print("[SegmentationAgent] Prediction completed ✅")
+                            full_prediction = np.concatenate(predictions).tolist() 
+                            print("[SegmentationAgent] Prediction completed ✅")
 
-                    except Exception as e:
-                        print(f"[SegmentationAgent] Error during prediction: {str(e)}")
-                        raise
+                        except Exception as e:
+                            print(f"[SegmentationAgent] Error during prediction: {str(e)}")
+                            raise
 
-                elif model=="TCN":
-                    window_size = 250  # 1-second window
-                    new_segments = segment_signal(signal, window_size , 250)
-                    new_segments = new_segments.reshape(-1, window_size, 1)
+                    elif model=="TCN":
+                        window_size = 250  # 1-second window
+                        new_segments = segment_signal(signal, window_size , 250)
+                        new_segments = new_segments.reshape(-1, window_size, 1)
 
-                    
-                    
+                        
+                        
 
-                    # Predict QRS regions
-                    y_pred = self.agent.TCN_model.predict(new_segments)
-                    
-                    y_pred = (y_pred > 0.5).astype(int)  # Convert probabilities to binary masks
-                    #print(y_pred[y_pred > 0])  # P
-                    #y_pred_clean = post_process_predictions(y_pred, threshold=0.5, min_duration=int(0.03 * 250))
-                    
-                    full_prediction = []
+                        # Predict QRS regions
+                        y_pred = self.agent.TCN_model.predict(new_segments)
+                        
+                        y_pred = (y_pred > 0.5).astype(int)  # Convert probabilities to binary masks
+                        #print(y_pred[y_pred > 0])  # P
+                        #y_pred_clean = post_process_predictions(y_pred, threshold=0.5, min_duration=int(0.03 * 250))
+                        
+                        full_prediction = []
 
-                                        
-                    for window in y_pred:
-                        for vec in window:  # vec is shape (3,)
-                            if np.all(vec == 0):
-                                full_prediction.append(0)  # background
-                            else:
-                                full_prediction.append(np.argmax(vec) + 1)  # class 1–3# flatten manually
-                    
-                    full_prediction = [int(x) for x in full_prediction]
-
+                                            
+                        for window in y_pred:
+                            for vec in window:  # vec is shape (3,)
+                                if np.all(vec == 0):
+                                    full_prediction.append(0)  # background
+                                else:
+                                    full_prediction.append(np.argmax(vec) + 1)  # class 1–3# flatten manually
+                        
+                        full_prediction = [int(x) for x in full_prediction]
+                    status = "success"
+                except:
+                    print("[SegmentationAgent] ℹ️ error SegmentationAgent")
+                    full_prediction = [0] * len(signal)
+                    status = "error"
 
 
 
@@ -147,7 +152,8 @@ class SegmentationAgent(Agent):
                     # Send result back to controller
                 response = Message(to="controller@localhost")
                 response.body = json.dumps({
-                    "full_prediction": full_prediction # Your processed signal
+                    "full_prediction": full_prediction, # Your processed signal
+                    "status": status
                 })
                 await self.send(response)
                 print("[SegmentationAgent] ✅ Sent detection back to controller")
