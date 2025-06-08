@@ -19,8 +19,8 @@ from . import views
 urlpatterns = [
     #ProcessECGView
     path('FullDetectionView/', views.FullDetectionView.as_view()),
-    
-
+    path('getSignals/', views.GetSignalsView.as_view()),
+    path('getSignal/', views.GetSignalView.as_view()),
 ]
 
 # 232,223,222,221,219,
