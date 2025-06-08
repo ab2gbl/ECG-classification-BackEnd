@@ -1,11 +1,12 @@
 {
-  "TCN_model_run_id": "d3b0aa5c939f4c0e9b100cb0f6ca22c2",
-  "UNet_model_run_id": "f8738577d7204d1797bb443bf3f6af98",
-  "R_detection_model_run_id": "8ae131ed2e484d8d9dcca8c8a22885cf",
-  "Beat_model_run_id": "34132965a4bc4f6586d6045f8a520ec1",
-  "Signal_normality_model_run_id": "a825c1f9c44347638d81b39f8eb5fbbf",
-  "Signal_SB_model_run_id": "833f782b6dfc476db50360854c7e4b25",
-  "Signal_sinus_arrhythmia_model_run_id": "6339a8bcd0824cc49f3a4d14b12e67e4",
-  "Signal_supraventricular_tachycardia_model_run_id": "f30bbe30f58741a4b8639742ab41213c",
-  "Signal_sinus_tachycardia_model_run_id": "102a2c9977a542cab278ff05eb0bff74"
+    "TCN_model_run_id": "7b591d254554424080fe5d0fbb1b5970",
+    "UNet_model_run_id": "43cdc62e40b34a538a98875d8536097b",
+    "R_detection_model_run_id": "a91b568d721d48b8985682b6de1b8575",
+    "Beat_model_run_id": "1ef6f51426334cdc85050dd62e012ef0",
+    "Signal_normality_model_run_id": "fa6991849334495aaf8ba9dfa6056def",
+    "Signal_SB_model_run_id": "41a2077a40184101bbdb0a9dc59a5194",
+    "Signal_sinus_arrhythmia_model_run_id": "f74dcc6f54ec4c9f9fb0f2e44ff7ed9b",
+    "Signal_supraventricular_tachycardia_model_run_id": "d65b9ca9f2d747e1879dc8e2f3595b56",
+    "Signal_sinus_tachycardia_model_run_id": "cefb0113a2c14f83b6e0a68b40f5e5dd",
+    "CNN_LSTM_model_run_id": "bedabae65f9d44d1be02843f1b28ce0a"
 }

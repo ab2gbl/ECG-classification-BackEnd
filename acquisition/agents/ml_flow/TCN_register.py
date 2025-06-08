@@ -14,7 +14,7 @@ def weighted_binary_crossentropy(y_true, y_pred):
     loss = tf.keras.losses.binary_crossentropy(y_true, y_pred)
     return tf.reduce_mean(loss * weight)
 
-model_path = 'acquisition/agents/models/first_QRS_T_P.keras'
+model_path = 'acquisition/agents/models/TCN.keras'
 model = load_model(model_path, custom_objects={
                         'weighted_binary_crossentropy': weighted_binary_crossentropy
                     })

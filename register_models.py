@@ -1,6 +1,8 @@
 import subprocess
 
 print("Registering models...")
+subprocess.run(["python", "acquisition/agents/ml_flow/CNN_LSTM_register.py"])
+print("CNN_LSTM model registered successfully.")
 subprocess.run(["python", "acquisition/agents/ml_flow/UNet_register.py"])
 print("UNet model registered successfully.")
 subprocess.run(["python", "acquisition/agents/ml_flow/TCN_register.py"])

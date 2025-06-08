@@ -56,6 +56,8 @@ class SegmentationAgent(Agent):
         self.UNet_run_id =  globals_vars.get_UNet()  
         self.TCN_model = None
         self.TCN_run_id = globals_vars.get_TCN()
+        self.CNN_LSTM_model = None
+        self.CNN_LSTM_run_id = globals_vars.get_CNN_LSTM()
 
     async def setup(self):
         print(f"[{self.jid}] SegmentationAgent started.")
@@ -68,6 +70,8 @@ class SegmentationAgent(Agent):
                 'weighted_binary_crossentropy': weighted_binary_crossentropy
             })
             print("[SegmentationAgent] TCN Model loaded successfully ✅")
+            self.CNN_LSTM_model = mlflow.keras.load_model(f"runs:/{self.CNN_LSTM_run_id}/model")
+            print("[SegmentationAgent] CNN_LSTM Model loaded successfully ✅")
 
         except Exception as e:
             print(f"[SegmentationAgent] Error loading model: {str(e)}")
@@ -85,8 +89,12 @@ class SegmentationAgent(Agent):
                     signal = np.array(data["signal"]) 
                     if data["model"] =="TCN":
                         model = "TCN"
+                    elif data["model"] == "CNN_LSTM":
+                        model = "CNN_LSTM"
                     else:
                         model = "UNet"
+
+                    print("Segmentation model:",model)
                     if model=="UNet":
                         signal = signal.reshape(1, 1, -1)  # (1, 1, L)
                         window_size = 240
@@ -114,34 +122,39 @@ class SegmentationAgent(Agent):
                             print(f"[SegmentationAgent] Error during prediction: {str(e)}")
                             raise
 
-                    elif model=="TCN":
-                        window_size = 250  # 1-second window
-                        new_segments = segment_signal(signal, window_size , 250)
-                        new_segments = new_segments.reshape(-1, window_size, 1)
+                    else:
+                        signal = signal.reshape(1, 1, -1)  # (1, 1, L)
+                        window_size = 240
+                        segments = []
+                        
+                        
+                        try:
 
                         
-                        
-
-                        # Predict QRS regions
-                        y_pred = self.agent.TCN_model.predict(new_segments)
-                        
-                        y_pred = (y_pred > 0.5).astype(int)  # Convert probabilities to binary masks
-                        #print(y_pred[y_pred > 0])  # P
-                        #y_pred_clean = post_process_predictions(y_pred, threshold=0.5, min_duration=int(0.03 * 250))
-                        
-                        full_prediction = []
-
-                                            
-                        for window in y_pred:
-                            for vec in window:  # vec is shape (3,)
-                                if np.all(vec == 0):
-                                    full_prediction.append(0)  # background
+                            predictions = []
+                            for i in range(0, signal.shape[2] - window_size + 1, window_size):
+                                window = signal[:, :, i:i+window_size]
+                                segments.append(window)
+                                
+                                
+                                if model == "CNN_LSTM":
+                                    output = self.agent.CNN_LSTM_model.predict(window, verbose=0)
+                                    
                                 else:
-                                    full_prediction.append(np.argmax(vec) + 1)  # class 1–3# flatten manually
-                        
-                        full_prediction = [int(x) for x in full_prediction]
+                                    output = self.agent.TCN_model.predict(window,verbose=0)
+                                pred = np.argmax(output, axis=-1)[0]  # (240,)
+                                predictions.append(pred)
+
+                            
+                            full_prediction = np.concatenate(predictions).tolist() 
+                            print("[SegmentationAgent] Prediction completed ✅")
+                            
+                        except Exception as e:
+                            print(f"[SegmentationAgent] Error during prediction: {str(e)}")
+                            raise
                     status = "success"
-                except:
+                except Exception as e:
+                    print(f"[SegmentationAgent] Error processing signal: {str(e)}")
                     print("[SegmentationAgent] ℹ️ error SegmentationAgent")
                     full_prediction = [0] * len(signal)
                     status = "error"

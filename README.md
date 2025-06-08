@@ -52,11 +52,13 @@ pip install -r requirements.txt # --no-deps
    `/acquisition/agents/models/<your model>`
 
 - models links:
-  - [TCN](https://drive.google.com/file/d/1HpYazmdleuyBTERfswcsJzbq7Vgp4MCS/view?usp=sharing)
-  - [UNet](https://www.kaggle.com/models/abdessamiguebli/unet-model-for-ecg-mask-detection/pyTorch/default)
+  - [CNN-LSTM](https://www.kaggle.com/models/abdessamiguebli/cnn-lstm-for-ecg-mask-detection)
+  - [TCN](https://www.kaggle.com/models/abdessamiguebli/tcn-model-for-ecg-mask-detection)
+  - [UNet](https://www.kaggle.com/models/abdessamiguebli/unet-model-for-ecg-mask-detection)
   - [R detection (version 2)](https://www.kaggle.com/models/abdessamiguebli/r-detection)
   - [Beat Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-beat-classification-model)
   - [Signal Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-signal-classification)
+  - [Other diseases](https://www.kaggle.com/models/abdessamiguebli/ecg-other-diseases) put it in `models/others/`
 
 5. **Register models to ML-Flow**
 

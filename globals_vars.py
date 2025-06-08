@@ -12,6 +12,12 @@ def save_config(data):
         json.dump(data, f, indent=4)
 
 config = load_config()
+# CNN-LSTM model
+def get_CNN_LSTM():
+    return config['CNN_LSTM_model_run_id']
+def set_CNN_LSTM(value):
+    config['CNN_LSTM_model_run_id'] = value
+    save_config(config)
 # TCN model 
 def get_TCN():
     return config['TCN_model_run_id']
@@ -66,3 +72,4 @@ def get_signal_sinus_tachycardia_model():
 def set_signal_sinus_tachycardia_model(value):
     config['Signal_sinus_tachycardia_model_run_id'] = value
     save_config(config)
+
