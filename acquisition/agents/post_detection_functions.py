@@ -24,7 +24,7 @@ def merge_close_waves(predicted, max_gap=10):
     indices = np.where(predicted == target_class)[0]
 
     if len(indices) < 2:
-        return predicted  
+        continue
 
     for i in range(len(indices) - 1):
         current = indices[i]
@@ -34,7 +34,7 @@ def merge_close_waves(predicted, max_gap=10):
 
   return predicted
 
-def remove_irrelevant_waves(predicted,start_search=2,end_search=5):
+def remove_irrelevant_waves(predicted,start_search=2,end_search=2):
     start=0
     # Find the first P that has a QRS after it
     if 1 in predicted[:start_search*250] :

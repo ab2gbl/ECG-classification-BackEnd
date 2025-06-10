@@ -223,27 +223,27 @@ class StorageAgent(Agent):
                 trigeminy_sum=signal_features["trigeminy_sum"],
 
                 # Beat Type Counts
-                count_N=signal_features.get("count_N", 0),
-                count_L=signal_features.get("count_L", 0),
-                count_R=signal_features.get("count_R", 0),
+                count_N=signal_features.get("count_n", 0),
+                count_L=signal_features.get("count_l", 0),
+                count_R=signal_features.get("count_r", 0),
                 count_slash=signal_features.get("count_/", 0),
-                count_V=signal_features.get("count_V", 0),
+                count_V=signal_features.get("count_v", 0),
                 count_else=signal_features.get("count_else", 0),
 
                 # Beat Type Ratios
-                ratio_N=signal_features.get("ratio_N", 0.0),
-                ratio_L=signal_features.get("ratio_L", 0.0),
-                ratio_R=signal_features.get("ratio_R", 0.0),
+                ratio_N=signal_features.get("ratio_n", 0.0),
+                ratio_L=signal_features.get("ratio_l", 0.0),
+                ratio_R=signal_features.get("ratio_r", 0.0),
                 ratio_slash=signal_features.get("ratio_/", 0.0),
-                ratio_V=signal_features.get("ratio_V", 0.0),
+                ratio_V=signal_features.get("ratio_v", 0.0),
                 ratio_else=signal_features.get("ratio_else", 0.0),
 
                 # Derived Features
                 percent_T_inversion=signal_features.get("percent_T_inversion", 0.0),
                 QRS_prolonged_ratio=signal_features.get("QRS_prolonged_ratio", 0.0),
                 QT_prolonged_ratio=signal_features.get("QT_prolonged_ratio", 0.0),
-                PVC_ratio=signal_features.get("PVC_ratio", 0.0),
+                PVC_ratio=signal_features.get("pvc_ratio", 0.0),
                 num_beats=signal_features.get("num_beats", 0),
-                std_Intervalle_RR_ms=signal_features.get("std_Intervalle_RR_ms", 0.0)
+                std_Intervalle_RR_ms=signal_features.get("std_intervalle_rr_ms", 0.0)
             )
         print(f"[StorageAgent] 🔍 All features saved")
