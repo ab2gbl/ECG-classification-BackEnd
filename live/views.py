@@ -45,13 +45,17 @@ class ECGUploadView(APIView):
                     record = wfdb.rdrecord(base_path, channels=list(range(12)))
                 signal = record.p_signal[:, 0]  # lead I
                 fs = record.fs
-                ecg_signal=signal
+                end = 1800
+                if end > len(signal)/fs:
+                    end = len(signal)/fs
+                ecg_signal=signal[0:int(end*fs)]
+                if fs != 250:
+                    ecg_signal = resample_signal(ecg_signal, original_fs=fs, target_fs=250)
+                    fs = 250
                 filtered_signal = bandpass_filter(ecg_signal,fs=fs)
                 smoothed_signal = smooth_signal(filtered_signal)
                 normalized_signal = normalize_signal(smoothed_signal)
-                if fs != 250:
-                    normalized_signal = resample_signal(normalized_signal, original_fs=fs, target_fs=250)
-                    fs = 250
+                
                     
 
                 return Response({
