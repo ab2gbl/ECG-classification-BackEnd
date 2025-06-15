@@ -145,8 +145,15 @@ class NormalVsAbnormalAgent(Agent):
                     
                     
                     df = pd.DataFrame([signal_features])
-                    y_pred = self.agent.model.predict(df)
-                    y_pred = y_pred[0]
+                    y_pred_proba = self.agent.model.predict_proba(df)
+                    print(f"Class 0 probability for the first sample: {y_pred_proba[0, 0]}")
+                    print(f"Class 1 probability for the first sample: {y_pred_proba[0, 1]}")
+                    
+                    threshold = 0.5
+                    y_pred_custom_threshold = (y_pred_proba[:, 1] >= threshold).astype(int)
+                    
+                    print(f"Predicted class with custom threshold for the first sample: {y_pred_custom_threshold[0]}")
+                    y_pred = y_pred_custom_threshold
                     
                     # Classify as Normal (0) or Abnormal (1)
                     if y_pred == 0:
