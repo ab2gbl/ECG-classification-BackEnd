@@ -1,4 +1,5 @@
 # ECG-classification-BackEnd
+for more details , check [my portfolio](https://ab2gbl-portfolio.vercel.app/work/AI-agents-for-real-time-ECG-interpretation)
 
 ## 1. Project install
 
@@ -14,13 +15,13 @@
 - For Windows:
 
 ```bash
-python -m venv myenv
+python -m venv myenv # python 3.12
 ```
 
 - For Linux:
 
 ```bash
-python3 -m venv myenv
+python3 -m venv myenv   # python 3.12
 #or
 python3.12 -m virtualenv env
 ```
@@ -56,9 +57,9 @@ pip install -r requirements.txt # --no-deps
   - [TCN](https://www.kaggle.com/models/abdessamiguebli/tcn-model-for-ecg-mask-detection)
   - [UNet](https://www.kaggle.com/models/abdessamiguebli/unet-model-for-ecg-mask-detection)
   - [R detection (version 2)](https://www.kaggle.com/models/abdessamiguebli/r-detection)
-  - [Beat Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-beat-classification-model)
-  - [Signal Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-signal-classification)
-  - [Other diseases](https://www.kaggle.com/models/abdessamiguebli/ecg-other-diseases) put it in `models/others/`
+  - [Beat Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-beat-classification/)
+  - [Signal Classification](https://www.kaggle.com/models/abdessamiguebli/ecg-full-signal-classification)
+  - [Other diseases](https://www.kaggle.com/models/abdessamiguebli/other-diseases-models) put it in `models/others/`
 
 5. **Register models to ML-Flow**
 
@@ -83,7 +84,7 @@ spade run
 ```
 
 ```bash
-mlflow server --host 127.0.0.1 --port 8080
+mlflow server --host 127.0.0.1 --port 8080 # if you didnt start it yet
 ```
 
 ```bash
